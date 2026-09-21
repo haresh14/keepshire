@@ -326,7 +326,8 @@ Playback decrypts to a temporary file; original vault file stays encrypted.
 | W4 | Help / instructions | Same-WiFi upload steps, including how to accept the HTTPS warning | SwiftUI sheet |
 | W5 | Pairing | 6-digit code shown in the app; browser posts it to `/pair` (5 attempts) for a session cookie | `WebAccessControl` |
 | W5b | Export session | Downloads stay off until Face ID / Touch ID or the vault credential unlocks a 10-minute window; ends on background or Stop Downloads | LocalAuthentication, Keychain |
-| W6 | Browser UI | Folder browse, breadcrumbs, upload, manage when not fake login. Explorer, status, progress, and success pages use the same teal/mint/green palette as the app; destructive actions remain red | `WebServerHTMLGenerator`, `WebServerHTMLComponents` |
+| W6 | Browser UI | Folder browse, breadcrumbs, upload, manage when not fake login. Explorer, status, and success pages use the same teal/mint/green palette as the app; destructive actions remain red | `WebServerHTMLGenerator`, `WebServerHTMLComponents` |
+| W6b | Browser drag and drop | Dragging files or folders anywhere over the explorer shows a “Drop to upload” overlay naming the destination folder. Dropping opens the upload dialog and starts the upload straight away; dropped directories keep their structure | `WebServerHTMLGenerator` |
 | W7 | Block fake login | UI disabled; HTTP 403 | — |
 | W8 | Background keep-alive | `UIBackgroundTask` named `WebServerUpload` while uploads are in flight, so a transfer that is already running survives a short trip away from the app. The server needs the app open; it does not accept new uploads once iOS suspends the app | UIKit background task |
 | W9 | Background URLSession | Session id `com.haresh.keepshire.background-upload`; POST `/upload`; trusts only this session’s TLS certificate | `URLSessionConfiguration.background` |

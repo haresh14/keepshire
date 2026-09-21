@@ -65,6 +65,14 @@ extension WebServerManager {
     ) -> String {
         let (folders, files) = getFolderContents(folderId: currentFolderId)
         let breadcrumbs = generateBreadcrumbs(folderId: currentFolderId)
+        let destinationFolderName: String = {
+            guard let currentFolderId = currentFolderId,
+                  let uuid = UUID(uuidString: currentFolderId),
+                  let folder = CoreDataManager.shared.fetchFolder(by: uuid) else {
+                return "Root"
+            }
+            return folder.displayName
+        }()
         
         var folderItems = ""
         for folder in folders {
@@ -95,7 +103,7 @@ extension WebServerManager {
             <div class="empty-state">
                 <div class="icon">📂</div>
                 <div>This folder is empty</div>
-                <div style="margin-top: 10px; font-size: 14px;">Click "Upload Files" to add content</div>
+                <div style="margin-top: 10px; font-size: 14px;">Drop files here, or click "Upload Files" to add content</div>
             </div>
         """ : ""
         
@@ -469,6 +477,59 @@ extension WebServerManager {
                     transform: scale(1.02);
                 }
                 
+                .drop-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 24px;
+                    background: rgba(0, 119, 151, 0.25);
+                    z-index: 1500;
+                }
+                
+                .drop-overlay.visible {
+                    display: flex;
+                }
+                
+                .drop-overlay-card {
+                    width: 100%;
+                    max-width: 480px;
+                    padding: 48px 32px;
+                    text-align: center;
+                    border: 3px dashed #007797;
+                    border-radius: 16px;
+                    background: rgba(255, 255, 255, 0.97);
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+                    pointer-events: none;
+                }
+                
+                .drop-overlay-icon {
+                    font-size: 56px;
+                    margin-bottom: 16px;
+                }
+                
+                .drop-overlay-title {
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: #007797;
+                    margin-bottom: 8px;
+                }
+                
+                .drop-overlay-subtitle {
+                    font-size: 14px;
+                    color: #666;
+                    word-break: break-word;
+                }
+                
+                .explorer-container.drop-target {
+                    outline: 3px dashed #007797;
+                    outline-offset: -6px;
+                }
+                
                 .upload-icon {
                     font-size: 48px;
                     color: #ccc;
@@ -706,36 +767,35 @@ extension WebServerManager {
                     border: 1px solid #f5c6cb;
                 }
                 
-                .upload-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.7);
-                    display: flex;
+                .upload-progress-panel {
+                    display: none;
                     align-items: center;
-                    justify-content: center;
-                    z-index: 2000;
+                    gap: 16px;
+                    margin: 20px;
+                    padding: 16px;
+                    border: 1px solid #cdeae4;
+                    border-radius: 12px;
+                    background: #F5FBFA;
                 }
                 
-                .upload-progress-card {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 30px;
-                    text-align: center;
-                    min-width: 300px;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                .upload-progress-panel.visible {
+                    display: flex;
+                }
+                
+                .uploading-active .upload-type-toggle,
+                .uploading-active .upload-area,
+                .uploading-active .upload-dialog-footer {
+                    display: none;
                 }
                 
                 .spinner {
-                    width: 50px;
-                    height: 50px;
-                    border: 4px solid #f3f3f3;
-                    border-top: 4px solid #007797;
+                    width: 28px;
+                    height: 28px;
+                    border: 3px solid #e3efee;
+                    border-top: 3px solid #007797;
                     border-radius: 50%;
                     animation: spin 1s linear infinite;
-                    margin: 0 auto 20px;
+                    flex-shrink: 0;
                 }
                 
                 @keyframes spin {
@@ -744,29 +804,32 @@ extension WebServerManager {
                 }
                 
                 .success-icon-large {
-                    font-size: 60px;
-                    color: #3C8E2A;
-                    margin-bottom: 20px;
+                    font-size: 28px;
+                    flex-shrink: 0;
+                }
+                
+                .upload-progress-copy {
+                    flex: 1;
+                    min-width: 0;
                 }
                 
                 .upload-progress-text {
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: 600;
                     color: #333;
-                    margin-bottom: 10px;
                 }
                 
                 .upload-progress-detail {
-                    font-size: 14px;
+                    font-size: 13px;
                     color: #666;
-                    margin-bottom: 20px;
+                    margin-top: 2px;
                 }
                 
                 .progress-percentage {
-                    font-size: 24px;
+                    font-size: 20px;
                     font-weight: 700;
                     color: #007797;
-                    margin-bottom: 15px;
+                    flex-shrink: 0;
                 }
                 
                 .secondary-btn {
@@ -853,6 +916,15 @@ extension WebServerManager {
                 </div>
             </div>
             
+            <!-- Drag and Drop Overlay -->
+            <div id="dropOverlay" class="drop-overlay">
+                <div class="drop-overlay-card">
+                    <div class="drop-overlay-icon">📥</div>
+                    <div class="drop-overlay-title">Drop to upload</div>
+                    <div class="drop-overlay-subtitle">Files and folders go into \(WebHTMLEscaping.text(destinationFolderName))</div>
+                </div>
+            </div>
+            
             <!-- Upload Dialog -->
             <div id="uploadDialog" class="upload-dialog" style="display: none;">
                 <div class="upload-dialog-content">
@@ -863,7 +935,7 @@ extension WebServerManager {
                     
                     <form id="uploadForm" enctype="multipart/form-data">
                         <!-- Upload Type Toggle -->
-                        <div style="text-align: center; margin-bottom: 15px;">
+                        <div class="upload-type-toggle" style="text-align: center; margin-bottom: 15px;">
                             <div style="display: inline-flex; background: #f8f9fa; border-radius: 8px; padding: 4px; border: 1px solid #dee2e6;">
                                 <label style="display: flex; align-items: center; padding: 8px 16px; margin: 0; cursor: pointer; border-radius: 6px; transition: all 0.2s; background: #007797; color: white;">
                                     <input type="radio" name="uploadType" value="files" checked style="display: none;">
@@ -890,6 +962,16 @@ extension WebServerManager {
                         
                         <div class="selected-files" id="selectedFiles" style="display: none;"></div>
                         
+                        <div class="upload-progress-panel" id="uploadProgressPanel">
+                            <div id="uploadSpinner" class="spinner"></div>
+                            <div id="uploadSuccessIcon" class="success-icon-large" style="display: none;">✅</div>
+                            <div class="upload-progress-copy">
+                                <div id="uploadProgressText" class="upload-progress-text">Uploading files...</div>
+                                <div id="uploadProgressDetail" class="upload-progress-detail">Preparing upload...</div>
+                            </div>
+                            <div id="uploadProgressPercentage" class="progress-percentage" style="display: none;">0%</div>
+                        </div>
+                        
                         <div class="progress-bar" id="progressBar" style="display: none;">
                             <div class="progress-fill" id="progressFill"></div>
                         </div>
@@ -901,17 +983,6 @@ extension WebServerManager {
                             <button type="submit" class="btn" id="uploadBtn" style="display: none;">Upload Files</button>
                         </div>
                     </form>
-                </div>
-            </div>
-            
-            <!-- Upload Progress Overlay -->
-            <div id="uploadOverlay" class="upload-overlay" style="display: none;">
-                <div class="upload-progress-card">
-                    <div id="uploadSpinner" class="spinner"></div>
-                    <div id="uploadSuccessIcon" class="success-icon-large" style="display: none;">✅</div>
-                    <div id="uploadProgressText" class="upload-progress-text">Uploading files...</div>
-                    <div id="uploadProgressDetail" class="upload-progress-detail">Preparing upload...</div>
-                    <div id="uploadProgressPercentage" class="progress-percentage" style="display: none;">0%</div>
                 </div>
             </div>
             
@@ -980,7 +1051,9 @@ extension WebServerManager {
                 const progressFill = document.getElementById('progressFill');
                 const statusMessage = document.getElementById('statusMessage');
                 const uploadDialog = document.getElementById('uploadDialog');
-                const uploadOverlay = document.getElementById('uploadOverlay');
+                const dropOverlay = document.getElementById('dropOverlay');
+                const explorerContainer = document.querySelector('.explorer-container');
+                const uploadProgressPanel = document.getElementById('uploadProgressPanel');
                 const uploadSpinner = document.getElementById('uploadSpinner');
                 const uploadSuccessIcon = document.getElementById('uploadSuccessIcon');
                 const uploadProgressText = document.getElementById('uploadProgressText');
@@ -1002,7 +1075,8 @@ extension WebServerManager {
                     fetch('/api/session', { headers: authHeaders() })
                         .then(response => response.json())
                         .then(state => {
-                            const busy = uploadDialog && uploadDialog.style.display === 'flex';
+                            const busy = (uploadDialog && uploadDialog.style.display === 'flex')
+                                || (dropOverlay && dropOverlay.classList.contains('visible'));
                             if (!busy && state.exportActive !== DOWNLOADS_ON) {
                                 window.location.reload();
                             }
@@ -1044,6 +1118,7 @@ extension WebServerManager {
                     updateUploadButton();
                     hideStatus();
                     hideProgress();
+                    hideUploadProgressPanel();
                     resetUploadButton();
                 }
                 
@@ -1111,15 +1186,147 @@ extension WebServerManager {
                     uploadArea.classList.remove('dragover');
                 });
                 
-                uploadArea.addEventListener('drop', (e) => {
+                uploadArea.addEventListener('drop', async (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     uploadArea.classList.remove('dragover');
                     
-                    const droppedFiles = Array.from(e.dataTransfer.files);
-                    // Check if any files have webkitRelativePath (indicating folder structure)
-                    const hasfolderStructure = droppedFiles.some(file => file.webkitRelativePath && file.webkitRelativePath.includes('/'));
+                    const droppedFiles = await filesFromDataTransfer(e.dataTransfer);
+                    const hasfolderStructure = droppedFiles.some(file => file._folderPath);
                     addFiles(droppedFiles, hasfolderStructure);
                 });
+                
+                // Dropping anywhere on the folder view uploads into the folder being viewed
+                function dragCarriesFiles(dataTransfer) {
+                    if (!dataTransfer) return false;
+                    const types = dataTransfer.types;
+                    if (!types) return false;
+                    return Array.from(types).indexOf('Files') !== -1;
+                }
+                
+                function showDropOverlay() {
+                    dropOverlay.classList.add('visible');
+                    if (explorerContainer) {
+                        explorerContainer.classList.add('drop-target');
+                    }
+                }
+                
+                function hideDropOverlay() {
+                    dragDepth = 0;
+                    clearTimeout(dragIdleTimer);
+                    dropOverlay.classList.remove('visible');
+                    if (explorerContainer) {
+                        explorerContainer.classList.remove('drop-target');
+                    }
+                }
+                
+                let dragDepth = 0;
+                let dragIdleTimer = null;
+                
+                document.addEventListener('dragenter', (e) => {
+                    if (!dragCarriesFiles(e.dataTransfer) || uploadDialog.style.display === 'flex') return;
+                    e.preventDefault();
+                    dragDepth++;
+                    showDropOverlay();
+                });
+                
+                document.addEventListener('dragover', (e) => {
+                    if (!dragCarriesFiles(e.dataTransfer)) return;
+                    // Without this the browser navigates away to the dropped file
+                    e.preventDefault();
+                    if (uploadDialog.style.display === 'flex') return;
+                    
+                    e.dataTransfer.dropEffect = 'copy';
+                    // A drag that leaves the window can swallow its dragleave, so fall back
+                    // to the 350ms drag loop going quiet
+                    clearTimeout(dragIdleTimer);
+                    dragIdleTimer = setTimeout(hideDropOverlay, 900);
+                });
+                
+                document.addEventListener('dragleave', (e) => {
+                    if (!dragCarriesFiles(e.dataTransfer)) return;
+                    dragDepth = Math.max(0, dragDepth - 1);
+                    if (dragDepth === 0) {
+                        hideDropOverlay();
+                    }
+                });
+                
+                document.addEventListener('drop', async (e) => {
+                    if (!dragCarriesFiles(e.dataTransfer)) return;
+                    e.preventDefault();
+                    if (uploadDialog.style.display === 'flex') return;
+                    hideDropOverlay();
+                    
+                    const pendingFiles = filesFromDataTransfer(e.dataTransfer);
+                    showUploadDialog();
+                    showStatus('Reading dropped items...');
+                    
+                    const droppedFiles = await pendingFiles;
+                    if (droppedFiles.length === 0) {
+                        showStatus('Nothing to upload from that drop', true);
+                        return;
+                    }
+                    
+                    hideStatus();
+                    const hasFolderStructure = droppedFiles.some(file => file._folderPath);
+                    if (hasFolderStructure) {
+                        document.querySelector('input[name="uploadType"][value="folders"]').checked = true;
+                        updateUploadMode();
+                    }
+                    addFiles(droppedFiles, hasFolderStructure);
+                    await startUpload();
+                });
+                
+                // Dropped directories only surface through the entries API, so walk it when
+                // it is available and fall back to the flat file list otherwise.
+                async function filesFromDataTransfer(dataTransfer) {
+                    const items = dataTransfer.items ? Array.from(dataTransfer.items) : [];
+                    const entries = items
+                        .filter(item => item.kind === 'file' && typeof item.webkitGetAsEntry === 'function')
+                        .map(item => item.webkitGetAsEntry())
+                        .filter(entry => entry);
+                    
+                    if (entries.length === 0) {
+                        return Array.from(dataTransfer.files);
+                    }
+                    
+                    const collected = await Promise.all(entries.map(entry => filesFromEntry(entry, '')));
+                    return collected.reduce((all, batch) => all.concat(batch), []);
+                }
+                
+                function filesFromEntry(entry, parentPath) {
+                    if (entry.isFile) {
+                        return new Promise((resolve) => {
+                            entry.file((file) => {
+                                file._folderPath = parentPath ? parentPath + '/' + entry.name : '';
+                                resolve([file]);
+                            }, () => resolve([]));
+                        });
+                    }
+                    
+                    const folderPath = parentPath ? parentPath + '/' + entry.name : entry.name;
+                    return readAllDirectoryEntries(entry.createReader())
+                        .then(children => Promise.all(children.map(child => filesFromEntry(child, folderPath))))
+                        .then(batches => batches.reduce((all, batch) => all.concat(batch), []));
+                }
+                
+                // readEntries returns a partial batch, so keep reading until it comes back empty
+                function readAllDirectoryEntries(reader) {
+                    return new Promise((resolve) => {
+                        const entries = [];
+                        const readBatch = () => {
+                            reader.readEntries((batch) => {
+                                if (batch.length === 0) {
+                                    resolve(entries);
+                                    return;
+                                }
+                                entries.push(...batch);
+                                readBatch();
+                            }, () => resolve(entries));
+                        };
+                        readBatch();
+                    });
+                }
                 
                 // File input change
                 fileInput.addEventListener('change', (e) => {
@@ -1148,7 +1355,7 @@ extension WebServerManager {
                     if (preserveFolderStructure && newFiles.length > 0) {
                         // Files from folder selection have webkitRelativePath property
                         const filesWithPaths = Array.from(newFiles).map(file => {
-                            file._folderPath = file.webkitRelativePath || '';
+                            file._folderPath = file._folderPath || file.webkitRelativePath || '';
                             file._uniqueId = 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                             return file;
                         });
@@ -1267,8 +1474,9 @@ extension WebServerManager {
                     progressFill.style.width = '0%';
                 }
                 
-                function showUploadOverlay() {
-                    uploadOverlay.style.display = 'flex';
+                function showUploadProgressPanel() {
+                    uploadForm.classList.add('uploading-active');
+                    uploadProgressPanel.classList.add('visible');
                     uploadSpinner.style.display = 'block';
                     uploadSuccessIcon.style.display = 'none';
                     uploadProgressText.textContent = 'Uploading files...';
@@ -1290,8 +1498,12 @@ extension WebServerManager {
                     uploadProgressPercentage.style.display = 'none';
                 }
                 
-                function hideUploadOverlay() {
-                    uploadOverlay.style.display = 'none';
+                function hideUploadProgressPanel() {
+                    uploadForm.classList.remove('uploading-active');
+                    uploadProgressPanel.classList.remove('visible');
+                    uploadSpinner.style.display = 'block';
+                    uploadSuccessIcon.style.display = 'none';
+                    uploadProgressPercentage.style.display = 'none';
                 }
                 
                 function updateProgress(current, total) {
@@ -1448,7 +1660,10 @@ extension WebServerManager {
                     const errors = [];
                     const originalFileCount = files.length;
                     
-                    showProgress();
+                    uploadBtn.disabled = true;
+                    uploadBtn.textContent = 'Uploading...';
+                    showUploadProgressPanel();
+                    showProgress(0);
                     updateProgress(0, originalFileCount);
                     
                     // Create a copy of files array to iterate through
@@ -1530,12 +1745,12 @@ extension WebServerManager {
                             files = [];
                             updateSelectedFiles();
                             updateUploadButton();
-                            hideUploadOverlay();
+                            hideUploadProgressPanel();
                             hideUploadDialog();
                             window.location.reload();
                         }, 2000);
                     } else {
-                        hideUploadOverlay();
+                        hideUploadProgressPanel();
                         const message = `Uploaded ${uploaded} files, ${failed} failed.`;
                         showStatus(message, failed > 0);
                     }
@@ -1574,7 +1789,7 @@ extension WebServerManager {
                         uploadBtn.textContent = 'Uploading...';
                         showProgress(0);
                         hideStatus();
-                        showUploadOverlay();
+                        showUploadProgressPanel();
                         
                         const xhr = new XMLHttpRequest();
                         
@@ -1619,7 +1834,7 @@ extension WebServerManager {
                                     
                                     // Hide overlay and refresh after showing success
                                     setTimeout(() => {
-                                        hideUploadOverlay();
+                                        hideUploadProgressPanel();
                                         hideUploadDialog();
                                         window.location.reload();
                                     }, 2000);
@@ -1630,7 +1845,7 @@ extension WebServerManager {
                                         setFileStatus(file._uniqueId, 'failed', response.message || 'Upload failed');
                                     });
                                     
-                                    hideUploadOverlay();
+                                    hideUploadProgressPanel();
                                     showStatus(response.message || 'Upload failed', true);
                                 }
                             } catch (e) {
@@ -1638,12 +1853,12 @@ extension WebServerManager {
                                     showUploadSuccess(files.length);
                                     clearFiles();
                                     setTimeout(() => {
-                                        hideUploadOverlay();
+                                        hideUploadProgressPanel();
                                         hideUploadDialog();
                                         window.location.reload();
                                     }, 2000);
                                 } else {
-                                    hideUploadOverlay();
+                                    hideUploadProgressPanel();
                                     showStatus('Upload failed: ' + xhr.status, true);
                                 }
                             }
@@ -1652,14 +1867,14 @@ extension WebServerManager {
                         xhr.addEventListener('error', () => {
                             hideProgress();
                             resetUploadButton();
-                            hideUploadOverlay();
+                            hideUploadProgressPanel();
                             showStatus('Upload failed: Network error. Please check your connection and try again.', true);
                         });
                         
                         xhr.addEventListener('timeout', () => {
                             hideProgress();
                             resetUploadButton();
-                            hideUploadOverlay();
+                            hideUploadProgressPanel();
                             showStatus('Upload timed out. Please try uploading smaller files or check your connection.', true);
                         });
                         
@@ -1679,15 +1894,12 @@ extension WebServerManager {
                     } catch (error) {
                         hideProgress();
                         resetUploadButton();
-                        hideUploadOverlay();
+                        hideUploadProgressPanel();
                         showStatus('Upload failed: ' + error.message, true);
                     }
                 }
                 
-                // Form submission
-                uploadForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
+                async function startUpload() {
                     if (files.length === 0) {
                         showStatus('Please select files to upload', true);
                         return;
@@ -1699,6 +1911,12 @@ extension WebServerManager {
                     } else {
                         await uploadFilesBatch();
                     }
+                }
+                
+                // Form submission
+                uploadForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await startUpload();
                 });
                 
                 // Close dialog when clicking outside

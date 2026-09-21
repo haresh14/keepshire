@@ -135,7 +135,10 @@ Simulator: Features → Face ID → Enrolled / Matching Face / Non-matching Face
 
 ## Web upload
 
-- [ ] Explorer, upload dialog, progress overlay, status page, and success page use the Keepshire teal/mint/green palette; destructive actions remain red
+- [ ] Explorer, upload dialog, status page, and success page use the Keepshire teal/mint/green palette; destructive actions remain red
+- [ ] Drag files over the explorer: the "Drop to upload" overlay names the folder being viewed and disappears when the drag leaves the window
+- [ ] Drop files on the explorer: one dialog opens, shows per-file and overall progress, and the files land in the folder being viewed
+- [ ] Drop a folder on the explorer: subfolders are recreated in the vault
 - [ ] Fresh install: launch and unlock do not request notification permission; starting Web Upload requests it once
 - [ ] Upload with the app on screen: in-app completion banner appears, no duplicate system banner
 - [ ] Upload while the app is in the App Switcher: a system notification arrives, as long as the transfer finishes within the short window iOS allows a backgrounded app
