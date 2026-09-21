@@ -126,17 +126,12 @@ struct VaultItemCell: View {
         .onTapGesture {
             onTap()
         }
-        .onLongPressGesture(minimumDuration: 0.5, perform: onLongPress)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isPressed {
-                        isPressed = true
-                    }
-                }
-                .onEnded { _ in
-                    isPressed = false
-                }
+        // Press feedback rides on the long-press gesture so a drag stays available to
+        // the enclosing scroll view instead of being claimed by the cell.
+        .onLongPressGesture(
+            minimumDuration: 0.5,
+            pressing: { isPressing in isPressed = isPressing },
+            perform: onLongPress
         )
         .onAppear {
             loadThumbnail()
