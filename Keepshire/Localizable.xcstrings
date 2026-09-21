@@ -150,6 +150,9 @@
     "Are you sure you want to permanently delete all %lld items in trash? This action cannot be undone." : {
 
     },
+    "Ascending" : {
+
+    },
     "Auto-Lock" : {
 
     },
@@ -290,6 +293,9 @@
 
     },
     "Deleted files are moved to trash instead of being permanently deleted." : {
+
+    },
+    "Descending" : {
 
     },
     "Disable Trash" : {
@@ -495,6 +501,9 @@
 
     },
     "Opens Settings" : {
+
+    },
+    "Order" : {
 
     },
     "Pairing Code:" : {

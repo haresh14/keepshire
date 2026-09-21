@@ -8,7 +8,6 @@ struct FolderContentSheetsModifier: ViewModifier {
     let mediaViewerPresented: Binding<Bool>
     let importAssets: ([PHPickerResult]) -> Void
     let importDocuments: ([(Data, String)]) -> Void
-    let selectSort: (FolderSortOption) -> Void
     let addPhotos: () -> Void
     let addFiles: () -> Void
     let createFolder: () -> Void
@@ -21,16 +20,6 @@ struct FolderContentSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $viewModel.showDocumentPicker) {
                 DocumentPickerView(completion: importDocuments)
-            }
-            .sheet(isPresented: $viewModel.showSortActionSheet) {
-                FolderSortPopupView(
-                    currentSortOption: viewModel.sortOption,
-                    sortAscending: viewModel.sortAscending,
-                    onSortSelected: selectSort
-                )
-                .presentationDetents([.fraction(0.5)])
-                .presentationDragIndicator(.visible)
-                .presentationSizing(.form)
             }
             .sheet(isPresented: $viewModel.showAddActionSheet) {
                 UniversalAddContentView.forFolder(

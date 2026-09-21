@@ -17,6 +17,8 @@ struct VaultToolbarView: ToolbarContent {
     let hasSelectedItems: Bool
     let canAddFiles: Bool
     let isEmpty: Bool
+    let sortOption: SortOption
+    let sortAscending: Bool
     
     // MARK: - Actions
     
@@ -27,7 +29,8 @@ struct VaultToolbarView: ToolbarContent {
     let onFavorite: (() -> Void)?
     let onCancel: () -> Void
     let onAdd: () -> Void
-    let onSort: () -> Void
+    let onSortSelected: (SortOption) -> Void
+    let onSortDirectionSelected: (Bool) -> Void
     let onEnterSelection: () -> Void
     
     // MARK: - Initialization
@@ -39,6 +42,8 @@ struct VaultToolbarView: ToolbarContent {
         hasSelectedItems: Bool,
         canAddFiles: Bool,
         isEmpty: Bool,
+        sortOption: SortOption,
+        sortAscending: Bool,
         onSelectAll: @escaping () -> Void,
         onMove: @escaping () -> Void,
         onDelete: @escaping () -> Void,
@@ -46,7 +51,8 @@ struct VaultToolbarView: ToolbarContent {
         onFavorite: (() -> Void)? = nil,
         onCancel: @escaping () -> Void,
         onAdd: @escaping () -> Void,
-        onSort: @escaping () -> Void,
+        onSortSelected: @escaping (SortOption) -> Void,
+        onSortDirectionSelected: @escaping (Bool) -> Void,
         onEnterSelection: @escaping () -> Void
     ) {
         self.isSelectionMode = isSelectionMode
@@ -55,6 +61,8 @@ struct VaultToolbarView: ToolbarContent {
         self.hasSelectedItems = hasSelectedItems
         self.canAddFiles = canAddFiles
         self.isEmpty = isEmpty
+        self.sortOption = sortOption
+        self.sortAscending = sortAscending
         self.onSelectAll = onSelectAll
         self.onMove = onMove
         self.onDelete = onDelete
@@ -62,7 +70,8 @@ struct VaultToolbarView: ToolbarContent {
         self.onFavorite = onFavorite
         self.onCancel = onCancel
         self.onAdd = onAdd
-        self.onSort = onSort
+        self.onSortSelected = onSortSelected
+        self.onSortDirectionSelected = onSortDirectionSelected
         self.onEnterSelection = onEnterSelection
     }
     
@@ -137,30 +146,34 @@ struct VaultToolbarView: ToolbarContent {
     
     @ViewBuilder
     private var normalModeActions: some View {
-        Menu {
-            if canAddFiles {
+        GallerySortMenu(
+            currentSortOption: sortOption,
+            sortAscending: sortAscending,
+            onSortSelected: onSortSelected,
+            onDirectionSelected: onSortDirectionSelected
+        )
+        .accessibilityIdentifier("vault.sort")
+
+        if canAddFiles {
+            Menu {
                 Button(action: onAdd) {
                     Label("Add Files", systemImage: "plus")
                 }
-            }
-            
-            Button(action: onSort) {
-                Label("Sort", systemImage: "arrow.up.arrow.down")
-            }
-            
-            if !isEmpty && canAddFiles {
-                Divider()
                 
-                Button(action: onEnterSelection) {
-                    Label("Select Items", systemImage: "checkmark.circle")
+                if !isEmpty {
+                    Divider()
+                    
+                    Button(action: onEnterSelection) {
+                        Label("Select Items", systemImage: "checkmark.circle")
+                    }
                 }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundColor(KeepshireTheme.accent)
             }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .foregroundColor(KeepshireTheme.accent)
+            .accessibilityIdentifier("vault.actions")
+            .accessibilityLabel("Vault actions")
         }
-        .accessibilityIdentifier("vault.actions")
-        .accessibilityLabel("Vault actions")
     }
 }
 

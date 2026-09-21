@@ -86,7 +86,6 @@ struct FolderContentView: View {
             mediaViewerPresented: mediaViewerPresented,
             importAssets: importAssets,
             importDocuments: importDocuments,
-            selectSort: selectSortOption,
             addPhotos: {
                 viewModel.showAddActionSheet = false
                 viewModel.showPhotoPicker = true
@@ -170,6 +169,8 @@ struct FolderContentView: View {
             hasSelectedFiles: !viewModel.selectedFiles.isEmpty,
             hasItems: !viewModel.folders.isEmpty || !viewModel.files.isEmpty,
             canAddFiles: loginStateManager.canAddFiles,
+            sortOption: viewModel.sortOption,
+            sortAscending: viewModel.sortAscending,
             selectAll: selectAllItems,
             cancel: exitSelectionMode,
             favorite: viewModel.toggleFavoriteSelectedFiles,
@@ -177,7 +178,8 @@ struct FolderContentView: View {
             move: { viewModel.showMoveSheet = true },
             delete: requestDeleteSelected,
             addFiles: { viewModel.showAddActionSheet = true },
-            sort: { viewModel.showSortActionSheet = true },
+            sort: selectSortOption,
+            sortDirection: { viewModel.sortAscending = $0 },
             selectItems: enterSelectionMode
         )
     }
@@ -215,13 +217,8 @@ struct FolderContentView: View {
     }
 
     private func selectSortOption(_ option: FolderSortOption) {
-        if option == viewModel.sortOption {
-            viewModel.sortAscending.toggle()
-        } else {
-            viewModel.sortOption = option
-            viewModel.sortAscending = true
-        }
-        viewModel.showSortActionSheet = false
+        guard option != viewModel.sortOption else { return }
+        viewModel.updateSortOption(option)
     }
 
     private func createFolder() {

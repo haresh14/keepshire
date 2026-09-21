@@ -45,7 +45,6 @@ final class VaultMainViewModel: ObservableObject, SelectionManageable, ImportMan
     @Published var showDeleteAlert: Bool = false
     @Published var showMoveSheet: Bool = false
     @Published var showWebUpload: Bool = false
-    @Published var showSortActionSheet: Bool = false
     @Published var showAddActionSheet: Bool = false
     
     // MARK: - Dependencies
@@ -313,17 +312,11 @@ final class VaultMainViewModel: ObservableObject, SelectionManageable, ImportMan
     
     // MARK: - Sort Management
     
-    /// Handle sort option selection with direction toggle
+    /// Apply a sort option, restarting from ascending order
     func handleSortSelection(_ option: SortOption) {
-        if option == sortOption {
-            // Toggle sort direction if same option is selected
-            sortAscending.toggle()
-        } else {
-            // Set new sort option and default to ascending
-            sortOption = option
-            sortAscending = true
-        }
-        showSortActionSheet = false
+        guard option != sortOption else { return }
+        sortOption = option
+        sortAscending = true
     }
     
     // MARK: - Sheet Management

@@ -40,7 +40,6 @@ final class FolderViewModel: ObservableObject, SelectionManageable, ImportManage
     // Sheet/Alert Presentation
     @Published var showCreateFolder = false
     @Published var showRenameFolder = false
-    @Published var showSortActionSheet = false
     @Published var showAddActionSheet = false
     @Published var showDeleteAlert = false
     @Published var showSwipeDeleteAlert = false
@@ -469,11 +468,6 @@ final class FolderViewModel: ObservableObject, SelectionManageable, ImportManage
         }
         itemsToDelete.removeAll()
         notifyRefresh()
-    }
-    
-    /// Toggle sort direction
-    func toggleSortDirection() {
-        sortAscending.toggle()
     }
     
     /// Update sort option and reset direction to ascending

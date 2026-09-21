@@ -82,6 +82,8 @@ struct VaultMainView: View {
                         hasSelectedItems: viewModel.hasSelection,
                         canAddFiles: loginStateManager.canAddFiles,
                         isEmpty: viewModel.vaultItems.isEmpty,
+                        sortOption: viewModel.sortOption,
+                        sortAscending: viewModel.sortAscending,
                         onSelectAll: { viewModel.selectAll(from: viewModel.vaultItems) },
                         onMove: { viewModel.showMoveSheet = true },
                         onDelete: { 
@@ -96,7 +98,8 @@ struct VaultMainView: View {
                         onFavorite: { viewModel.toggleFavoriteSelectedItems() },
                         onCancel: { viewModel.exitSelectionMode() },
                         onAdd: { viewModel.showAddActions() },
-                        onSort: { viewModel.showSortActionSheet = true },
+                        onSortSelected: { viewModel.handleSortSelection($0) },
+                        onSortDirectionSelected: { viewModel.sortAscending = $0 },
                         onEnterSelection: { viewModel.enterSelectionMode() }
                     )
                 }
@@ -114,16 +117,6 @@ struct VaultMainView: View {
                 .sheet(isPresented: $viewModel.showWebUpload) {
                     WebUploadView()
                 }
-                .sheet(isPresented: $viewModel.showSortActionSheet) {
-                GallerySortPopupView(
-                        currentSortOption: viewModel.sortOption,
-                        sortAscending: viewModel.sortAscending,
-                        onSortSelected: viewModel.handleSortSelection
-                )
-                .presentationDetents([.fraction(0.5)])
-                .presentationDragIndicator(.visible)
-                .presentationSizing(.form)
-            }
                 .sheet(isPresented: $viewModel.showAddActionSheet) {
                 UniversalAddContentView.forGallery(
                         onAddPhotos: viewModel.handleAddPhotos,

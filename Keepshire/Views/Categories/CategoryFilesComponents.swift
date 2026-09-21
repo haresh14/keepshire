@@ -99,13 +99,16 @@ struct CategoryFilesToolbar: ToolbarContent {
     let isSelectionMode: Bool
     let hasSelection: Bool
     let hasItems: Bool
+    let sortOption: SortOption
+    let sortAscending: Bool
     let selectAll: () -> Void
     let cancel: () -> Void
     let favorite: () -> Void
     let share: () -> Void
     let move: () -> Void
     let delete: () -> Void
-    let sort: () -> Void
+    let sort: (SortOption) -> Void
+    let sortDirection: (Bool) -> Void
     let enterSelection: () -> Void
 
     var body: some ToolbarContent {
@@ -129,33 +132,21 @@ struct CategoryFilesToolbar: ToolbarContent {
                     }
                 }
             } else {
-                Menu {
-                    Button(action: sort) { Label("Sort", systemImage: "arrow.up.arrow.down") }
-                    if hasItems {
-                        Divider()
+                CategorySortMenu(
+                    currentSortOption: sortOption,
+                    sortAscending: sortAscending,
+                    onSortSelected: sort,
+                    onDirectionSelected: sortDirection
+                )
+                if hasItems {
+                    Menu {
                         Button(action: enterSelection) { Label("Select Items", systemImage: "checkmark.circle") }
+                    } label: {
+                        Image(systemName: "ellipsis.circle").foregroundColor(KeepshireTheme.accent)
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle").foregroundColor(KeepshireTheme.accent)
                 }
             }
         }
-    }
-}
-
-struct CategoryFilesSortSheet: View {
-    let currentSortOption: SortOption
-    let sortAscending: Bool
-    let select: (SortOption) -> Void
-
-    var body: some View {
-        CategorySortPopupView(
-            currentSortOption: currentSortOption,
-            sortAscending: sortAscending,
-            onSortSelected: select
-        )
-        .presentationDetents([.fraction(0.5)])
-        .presentationDragIndicator(.visible)
     }
 }
 

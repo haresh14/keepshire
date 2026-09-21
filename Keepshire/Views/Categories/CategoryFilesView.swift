@@ -9,7 +9,6 @@ struct CategoryFilesView: View {
     let categoryType: CategoryType
     let onPreviewFile: ((VaultItem, [VaultItem]) -> Void)?
     @StateObject private var viewModel: CategoryFilesViewModel
-    @State private var showSortActionSheet = false
     @State private var showDeleteAlert = false
     @State private var showMoveSheet = false
     @State private var showRenameAlert = false
@@ -45,14 +44,6 @@ struct CategoryFilesView: View {
         .navigationBarBackButtonHidden(viewModel.isSelectionMode)
         .searchable(text: $viewModel.searchText, prompt: "Search \(categoryType.rawValue.lowercased())")
         .toolbar { toolbar }
-        .sheet(isPresented: $showSortActionSheet) {
-            CategoryFilesSortSheet(
-                currentSortOption: viewModel.sortOption,
-                sortAscending: viewModel.sortAscending,
-                select: selectSortOption
-            )
-            .presentationSizing(.form)
-        }
         .sheet(isPresented: $showMoveSheet) {
             CategoryFilesMoveSheet(selectedFiles: viewModel.selectedItems) { destination in
                 viewModel.moveSelectedItems(to: destination)
@@ -120,13 +111,16 @@ struct CategoryFilesView: View {
             isSelectionMode: viewModel.isSelectionMode,
             hasSelection: !viewModel.selectedItems.isEmpty,
             hasItems: !viewModel.sortedItems.isEmpty,
+            sortOption: viewModel.sortOption,
+            sortAscending: viewModel.sortAscending,
             selectAll: viewModel.selectAll,
             cancel: viewModel.exitSelectionMode,
             favorite: viewModel.toggleFavoriteSelectedItems,
             share: viewModel.shareSelectedItems,
             move: { showMoveSheet = true },
             delete: requestDeleteSelected,
-            sort: { showSortActionSheet = true },
+            sort: selectSortOption,
+            sortDirection: { viewModel.sortAscending = $0 },
             enterSelection: viewModel.enterSelectionMode
         )
     }
@@ -144,13 +138,9 @@ struct CategoryFilesView: View {
     }
 
     private func selectSortOption(_ option: SortOption) {
-        if option == viewModel.sortOption {
-            viewModel.sortAscending.toggle()
-        } else {
-            viewModel.sortOption = option
-            viewModel.sortAscending = true
-        }
-        showSortActionSheet = false
+        guard option != viewModel.sortOption else { return }
+        viewModel.sortOption = option
+        viewModel.sortAscending = true
     }
 
     private func requestDeleteSelected() {

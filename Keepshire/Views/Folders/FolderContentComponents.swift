@@ -159,6 +159,8 @@ struct FolderContentToolbar: ToolbarContent {
     let hasSelectedFiles: Bool
     let hasItems: Bool
     let canAddFiles: Bool
+    let sortOption: FolderSortOption
+    let sortAscending: Bool
     let selectAll: () -> Void
     let cancel: () -> Void
     let favorite: () -> Void
@@ -166,7 +168,8 @@ struct FolderContentToolbar: ToolbarContent {
     let move: () -> Void
     let delete: () -> Void
     let addFiles: () -> Void
-    let sort: () -> Void
+    let sort: (FolderSortOption) -> Void
+    let sortDirection: (Bool) -> Void
     let selectItems: () -> Void
 
     var body: some ToolbarContent {
@@ -194,17 +197,26 @@ struct FolderContentToolbar: ToolbarContent {
                     }
                 }
             } else {
-                Menu {
-                    if canAddFiles {
-                        Button(action: addFiles) { Label("Add Files", systemImage: "plus") }
+                FolderSortMenu(
+                    currentSortOption: sortOption,
+                    sortAscending: sortAscending,
+                    onSortSelected: sort,
+                    onDirectionSelected: sortDirection
+                )
+                if canAddFiles || hasItems {
+                    Menu {
+                        if canAddFiles {
+                            Button(action: addFiles) { Label("Add Files", systemImage: "plus") }
+                        }
+                        if hasItems {
+                            if canAddFiles {
+                                Divider()
+                            }
+                            Button(action: selectItems) { Label("Select Items", systemImage: "checkmark.circle") }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle").foregroundColor(KeepshireTheme.accent)
                     }
-                    Button(action: sort) { Label("Sort", systemImage: "arrow.up.arrow.down") }
-                    if hasItems {
-                        Divider()
-                        Button(action: selectItems) { Label("Select Items", systemImage: "checkmark.circle") }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle").foregroundColor(KeepshireTheme.accent)
                 }
             }
         }
