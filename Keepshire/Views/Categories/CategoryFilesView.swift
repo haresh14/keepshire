@@ -95,7 +95,12 @@ struct CategoryFilesView: View {
                     viewModel.viewFile(item)
                 }
             },
-            select: viewModel.toggleSelection,
+            select: { item in
+                if !viewModel.isSelectionMode {
+                    viewModel.enterSelectionMode()
+                }
+                viewModel.toggleSelection(item)
+            },
             longPress: { item in
                 if !viewModel.isSelectionMode {
                     viewModel.enterSelectionMode()

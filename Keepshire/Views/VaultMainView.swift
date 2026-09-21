@@ -206,7 +206,7 @@ struct VaultMainView: View {
                     viewModel.triggerSelectionHaptic()
                     viewModel.enterSelectionMode()
                 }
-                viewModel.selectedItems.insert(item)
+                viewModel.toggleSelection(for: item)
             },
             showFavoriteIndicator: true
         )

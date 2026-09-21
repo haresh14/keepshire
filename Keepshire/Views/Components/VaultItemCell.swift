@@ -108,16 +108,8 @@ struct VaultItemCell: View {
                         Spacer()
                         HStack {
                             Spacer()
-                            ZStack {
-                                Circle()
-                                    .fill(Color.white.opacity(0.9))
-                                    .frame(width: 24, height: 24)
-                                
-                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                    .font(.body)
-                                    .foregroundColor(isSelected ? KeepshireTheme.accent : .gray)
-                            }
-                            .padding(2)
+                            SelectionBadge(isSelected: isSelected)
+                                .padding(6)
                         }
                     }
                 }
@@ -147,6 +139,34 @@ struct VaultItemCell: View {
         }
     }
     
+    // MARK: - Selection Badge
+
+    /// Photos-style badge: a white ring over the thumbnail, filled with the brand
+    /// colour and a checkmark once the item is picked.
+    private struct SelectionBadge: View {
+        let isSelected: Bool
+
+        private let diameter: CGFloat = 22
+
+        var body: some View {
+            ZStack {
+                Circle()
+                    .fill(isSelected ? KeepshireTheme.accent : Color.black.opacity(0.28))
+                Circle()
+                    .strokeBorder(Color.white, lineWidth: 1.5)
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(width: diameter, height: diameter)
+            .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
+            .animation(.easeInOut(duration: 0.15), value: isSelected)
+        }
+    }
+
     // MARK: - Helper Methods
     
     private var videoAccessibilityLabel: String {
