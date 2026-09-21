@@ -165,24 +165,7 @@ final class VaultMainViewModel: ObservableObject, SelectionManageable, ImportMan
     
     /// Sort items based on current sort option and direction
     private func sortItems(_ items: [VaultItem]) -> [VaultItem] {
-        let sorted: [VaultItem]
-        
-        switch sortOption {
-        case .userDefault:
-            sorted = items.sorted { ($0.createdAt ?? Date.distantPast) < ($1.createdAt ?? Date.distantPast) }
-        case .name:
-            sorted = items.sorted { ($0.fileName ?? "") < ($1.fileName ?? "") }
-        case .size:
-            sorted = items.sorted { $0.fileSize < $1.fileSize }
-        case .date:
-            sorted = items.sorted { ($0.createdAt ?? Date.distantPast) < ($1.createdAt ?? Date.distantPast) }
-        case .favorites:
-            sorted = items.sorted { ($0.isFavorite && !$1.isFavorite) || ($0.isFavorite == $1.isFavorite && ($0.fileName ?? "") < ($1.fileName ?? "")) }
-        case .kind:
-            sorted = items.sorted { ($0.fileType ?? "") < ($1.fileType ?? "") }
-        }
-        
-        return sortAscending ? sorted : sorted.reversed()
+        items.sorted(by: sortOption, ascending: sortAscending)
     }
     
     // MARK: - Selection Management (SelectionManageable Implementation)

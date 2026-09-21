@@ -32,11 +32,34 @@ struct SelectableFileRowView: View {
                         .frame(width: 40, height: 40)
                         .clipped()
                         .cornerRadius(6)
+                        .overlay(alignment: .topLeading) {
+                            if file.isVideo {
+                                Text(file.formattedDuration)
+                                    .font(.system(size: 7, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 2)
+                                    .padding(.vertical, 1)
+                                    .background(Color.black.opacity(0.65))
+                                    .cornerRadius(2)
+                                    .padding(2)
+                            }
+                        }
                 } else {
                     Image(systemName: file.isImage ? "photo" : file.isVideo ? "video" : "doc")
                         .foregroundColor(file.isImage ? .blue : file.isVideo ? .purple : .orange)
                         .font(.title2)
                         .frame(width: 40, height: 40)
+                        .overlay(alignment: .topLeading) {
+                            if file.isVideo {
+                                Text(file.formattedDuration)
+                                    .font(.system(size: 7, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 2)
+                                    .padding(.vertical, 1)
+                                    .background(Color.black.opacity(0.65))
+                                    .cornerRadius(2)
+                            }
+                        }
                 }
             }
 
@@ -78,7 +101,7 @@ struct SelectableFileRowView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("file.\(file.id?.uuidString ?? file.fileName ?? "unknown")")
-        .accessibilityLabel(file.fileName ?? "Unnamed file")
+        .accessibilityLabel(file.isVideo ? "\(file.fileName ?? "Unnamed file"), \(file.formattedDuration)" : (file.fileName ?? "Unnamed file"))
         .accessibilityValue(isSelected ? "Selected" : file.fileType ?? "File")
         .contentShape(Rectangle())
         .onTapGesture {

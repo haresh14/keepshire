@@ -7,13 +7,37 @@ struct SealedVaultItemPayload: Codable, Equatable {
     var fileType: String
     var fileSize: Int64
     var thumbnailFileName: String?
+    var durationSeconds: Double
+
+    init(
+        fileName: String,
+        fileType: String,
+        fileSize: Int64,
+        thumbnailFileName: String? = nil,
+        durationSeconds: Double = 0
+    ) {
+        self.fileName = fileName
+        self.fileType = fileType
+        self.fileSize = fileSize
+        self.thumbnailFileName = thumbnailFileName
+        self.durationSeconds = durationSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fileName = try container.decode(String.self, forKey: .fileName)
+        fileType = try container.decode(String.self, forKey: .fileType)
+        fileSize = try container.decode(Int64.self, forKey: .fileSize)
+        thumbnailFileName = try container.decodeIfPresent(String.self, forKey: .thumbnailFileName)
+        durationSeconds = try container.decodeIfPresent(Double.self, forKey: .durationSeconds) ?? 0
+    }
 }
 
 struct SealedFolderPayload: Codable, Equatable {
     var name: String
 }
 
-/// Encrypts display names, MIME types, and sizes into `sealedMetadata` before a Core Data
+/// Encrypts display names, MIME types, sizes, and video duration into `sealedMetadata` before a Core Data
 /// save, then restores them in RAM so search and the gallery keep working after unlock.
 ///
 /// `VaultItem` and `Folder` call `reveal` every time Core Data materializes them, so the
@@ -147,7 +171,8 @@ final class VaultMetadataSealer {
             fileName: name,
             fileType: item.fileType ?? "application/octet-stream",
             fileSize: item.fileSize,
-            thumbnailFileName: item.thumbnailFileName
+            thumbnailFileName: item.thumbnailFileName,
+            durationSeconds: item.durationSeconds
         )
         guard let json = try? JSONEncoder().encode(payload),
               let sealed = try? cryptoService.encrypt(json, using: key) else { return }
@@ -155,6 +180,7 @@ final class VaultMetadataSealer {
         item.fileName = nil
         item.fileType = nil
         item.fileSize = 0
+        item.durationSeconds = 0
         item.thumbnailFileName = nil
     }
 
@@ -175,7 +201,15 @@ final class VaultMetadataSealer {
               let payload = try? JSONDecoder().decode(SealedVaultItemPayload.self, from: json) else {
             return false
         }
-        assign(item, fileName: payload.fileName, fileType: payload.fileType, fileSize: payload.fileSize, thumbnailFileName: payload.thumbnailFileName, markDirty: markDirty)
+        assign(
+            item,
+            fileName: payload.fileName,
+            fileType: payload.fileType,
+            fileSize: payload.fileSize,
+            thumbnailFileName: payload.thumbnailFileName,
+            durationSeconds: payload.durationSeconds,
+            markDirty: markDirty
+        )
         return true
     }
 
@@ -196,6 +230,7 @@ final class VaultMetadataSealer {
         fileType: String,
         fileSize: Int64,
         thumbnailFileName: String?,
+        durationSeconds: Double,
         markDirty: Bool
     ) {
         if markDirty {
@@ -203,12 +238,14 @@ final class VaultMetadataSealer {
             item.fileType = fileType
             item.fileSize = fileSize
             item.thumbnailFileName = thumbnailFileName
+            item.durationSeconds = durationSeconds
             return
         }
         item.setPrimitiveValue(fileName, forKey: "fileName")
         item.setPrimitiveValue(fileType, forKey: "fileType")
         item.setPrimitiveValue(NSNumber(value: fileSize), forKey: "fileSize")
         item.setPrimitiveValue(thumbnailFileName, forKey: "thumbnailFileName")
+        item.setPrimitiveValue(NSNumber(value: durationSeconds), forKey: "durationSeconds")
     }
 
     private func assign(_ folder: Folder, name: String, markDirty: Bool) {

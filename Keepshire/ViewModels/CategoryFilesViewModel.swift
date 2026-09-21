@@ -30,22 +30,7 @@ final class CategoryFilesViewModel: ObservableObject, SearchManageable {
         let filteredItems = searchText.isEmpty ? items : items.filter { item in
             item.fileName?.localizedCaseInsensitiveContains(searchText) ?? false
         }
-        
-        // Then sort the filtered items
-        let sorted: [VaultItem]
-        switch sortOption {
-        case .userDefault, .date:
-            sorted = filteredItems.sorted { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }
-        case .name:
-            sorted = filteredItems.sorted { ($0.fileName ?? "") < ($1.fileName ?? "") }
-        case .size:
-            sorted = filteredItems.sorted { $0.fileSize < $1.fileSize }
-        case .favorites:
-            sorted = filteredItems.sorted { ($0.isFavorite && !$1.isFavorite) || ($0.isFavorite == $1.isFavorite && ($0.fileName ?? "") < ($1.fileName ?? "")) }
-        case .kind:
-            sorted = filteredItems.sorted { ($0.fileType ?? "") < ($1.fileType ?? "") }
-        }
-        return sortAscending ? sorted : sorted.reversed()
+        return filteredItems.sorted(by: sortOption, ascending: sortAscending)
     }
 
     // MARK: - Private

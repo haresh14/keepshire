@@ -11,6 +11,7 @@ extension CoreDataManager {
         item.fileName = fileName
         item.fileType = fileType
         item.fileSize = 0
+        item.durationSeconds = 0
         item.createdAt = Date()
         item.updatedAt = Date()
         item.folder = folder
@@ -28,6 +29,7 @@ extension CoreDataManager {
         fileType: String,
         fileSize: Int64,
         thumbnailFileName: String? = nil,
+        durationSeconds: Double = 0,
         in folder: Folder? = nil,
         id: UUID? = nil
     ) throws -> VaultItem {
@@ -39,6 +41,7 @@ extension CoreDataManager {
         item.fileName = fileName
         item.fileType = fileType
         item.fileSize = fileSize
+        item.durationSeconds = durationSeconds
         item.thumbnailFileName = thumbnailFileName
         item.createdAt = Date()
         item.updatedAt = Date()

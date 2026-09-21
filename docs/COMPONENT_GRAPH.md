@@ -244,6 +244,8 @@ erDiagram
         UUID id
         string fileName
         string fileType
+        int64 fileSize
+        double durationSeconds
         bool isFavorite
         bool isDeleted
         date createdAt

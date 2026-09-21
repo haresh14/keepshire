@@ -15,6 +15,7 @@ extension VaultItem {
     }
 
     @NSManaged public var createdAt: Date?
+    @NSManaged public var durationSeconds: Double
     @NSManaged public var fileName: String?
     @NSManaged public var fileSize: Int64
     @NSManaged public var fileType: String?
@@ -29,6 +30,17 @@ extension VaultItem {
     
     var dateAdded: Date? {
         return createdAt
+    }
+
+    var formattedDuration: String {
+        let total = max(0, Int(durationSeconds.rounded()))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let remainder = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, remainder)
+        }
+        return String(format: "%d:%02d", minutes, remainder)
     }
 
 }

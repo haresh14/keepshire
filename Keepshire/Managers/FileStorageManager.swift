@@ -714,6 +714,7 @@ class FileStorageManager: FileStorageManaging {
             fileType: fileType,
             fileSize: Int64(data.count),
             thumbnailFileName: persisted.thumbnailFileName,
+            durationSeconds: persisted.durationSeconds,
             in: targetFolder,
             id: persisted.blobID
         )
@@ -744,6 +745,7 @@ class FileStorageManager: FileStorageManaging {
             fileType: fileType,
             fileSize: size,
             thumbnailFileName: persisted.thumbnailFileName,
+            durationSeconds: persisted.durationSeconds,
             in: targetFolder,
             id: persisted.blobID
         )
@@ -779,6 +781,7 @@ class FileStorageManager: FileStorageManaging {
                 fileType: fileType,
                 fileSize: Int64(data.count),
                 thumbnailFileName: persisted.thumbnailFileName,
+                durationSeconds: persisted.durationSeconds,
                 in: targetFolder,
                 id: persisted.blobID
             ) { vaultItem in
@@ -801,12 +804,13 @@ class FileStorageManager: FileStorageManaging {
         displayName: String,
         fileType: String,
         key: SymmetricKey
-    ) throws -> (blobID: UUID, thumbnailFileName: String?) {
+    ) throws -> (blobID: UUID, thumbnailFileName: String?, durationSeconds: Double) {
         let blobID = UUID()
         let blobName = blobID.uuidString
         try encryptedFileStore.write(data, fileName: blobName, key: key)
 
         var thumbnailFileName: String?
+        var durationSeconds: Double = 0
         if fileType.hasPrefix("image/") {
             thumbnailFileName = try? thumbnailService.generateImageThumbnail(
                 from: data,
@@ -814,14 +818,16 @@ class FileStorageManager: FileStorageManaging {
                 key: key
             )
         } else if fileType.hasPrefix("video/") {
-            thumbnailFileName = try? thumbnailService.generateVideoThumbnail(
+            let video = try? thumbnailService.generateVideoThumbnail(
                 from: data,
                 storageKey: blobName,
                 displayFileName: displayName,
                 key: key
             )
+            thumbnailFileName = video?.fileName
+            durationSeconds = video?.durationSeconds ?? 0
         }
-        return (blobID, thumbnailFileName)
+        return (blobID, thumbnailFileName, durationSeconds)
     }
 
     private func persistNewBlob(
@@ -830,12 +836,13 @@ class FileStorageManager: FileStorageManaging {
         fileType: String,
         fileSize: Int64,
         key: SymmetricKey
-    ) throws -> (blobID: UUID, thumbnailFileName: String?) {
+    ) throws -> (blobID: UUID, thumbnailFileName: String?, durationSeconds: Double) {
         let blobID = UUID()
         let blobName = blobID.uuidString
         try encryptedFileStore.write(fromFileURL: source, fileName: blobName, key: key)
 
         var thumbnailFileName: String?
+        var durationSeconds: Double = 0
         if fileType.hasPrefix("image/"), fileSize < Int64(VaultBlobFormat.inMemoryThreshold) {
             let data = try Data(contentsOf: source, options: [.mappedIfSafe])
             thumbnailFileName = try? thumbnailService.generateImageThumbnail(
@@ -844,14 +851,16 @@ class FileStorageManager: FileStorageManaging {
                 key: key
             )
         } else if fileType.hasPrefix("video/") {
-            thumbnailFileName = try? thumbnailService.generateVideoThumbnail(
+            let video = try? thumbnailService.generateVideoThumbnail(
                 fromFileURL: source,
                 storageKey: blobName,
                 displayFileName: displayName,
                 key: key
             )
+            thumbnailFileName = video?.fileName
+            durationSeconds = video?.durationSeconds ?? 0
         }
-        return (blobID, thumbnailFileName)
+        return (blobID, thumbnailFileName, durationSeconds)
     }
 
     func loadFile(vaultItem: VaultItem) throws -> Data {

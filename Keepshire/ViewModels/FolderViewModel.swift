@@ -331,7 +331,7 @@ final class FolderViewModel: ObservableObject, SelectionManageable, ImportManage
             sorted = folders.sorted { ($0.name ?? "") < ($1.name ?? "") }
         case .date:
             sorted = folders.sorted { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }
-        case .size:
+        case .size, .duration:
             sorted = folders.sorted { $0.totalItemCount < $1.totalItemCount }
         case .kind:
             sorted = folders.sorted { ($0.name ?? "") < ($1.name ?? "") }
@@ -351,22 +351,7 @@ final class FolderViewModel: ObservableObject, SelectionManageable, ImportManage
     }
     
     private func sort(files: [VaultItem]) -> [VaultItem] {
-        let sorted: [VaultItem]
-        switch sortOption {
-        case .userDefault:
-            sorted = files.sorted { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }
-        case .name:
-            sorted = files.sorted { ($0.fileName ?? "") < ($1.fileName ?? "") }
-        case .date:
-            sorted = files.sorted { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }
-        case .size:
-            sorted = files.sorted { $0.fileSize < $1.fileSize }
-        case .favorites:
-            sorted = files.sorted { ($0.isFavorite && !$1.isFavorite) || ($0.isFavorite == $1.isFavorite && ($0.fileName ?? "") < ($1.fileName ?? "")) }
-        case .kind:
-            sorted = files.sorted { ($0.fileType ?? "") < ($1.fileType ?? "") }
-        }
-        return sortAscending ? sorted : sorted.reversed()
+        files.sorted(by: sortOption.asFileSort, ascending: sortAscending)
     }
     
     // MARK: - Protocol Implementations

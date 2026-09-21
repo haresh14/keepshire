@@ -93,7 +93,7 @@ Simulator: Features → Face ID → Enrolled / Matching Face / Non-matching Face
 - [ ] Folder tab shows its title on first load, and pushing into a nested folder does not flash "Folders" before the folder name
 - [ ] VoiceOver announces passcode progress without speaking digits
 - [ ] Largest Dynamic Type keeps the number pad and Continue controls usable
-- [ ] Sort, multi-select, favorite, share, rename, move
+- [ ] Sort (including Duration), multi-select, favorite, share, rename, move
 - [ ] Trash restore / empty / disable with contents
 - [ ] Trash off: delete a file and confirm its `Documents/Vault/` blob and `Documents/Thumbnails/` thumb are gone
 - [ ] Unlock clears vault files and thumbnails that belong to no item
@@ -129,6 +129,8 @@ Simulator: Features → Face ID → Enrolled / Matching Face / Non-matching Face
 
 - [ ] Gallery shows every photo and video after unlock, and excludes documents and audio
 - [ ] Gallery search and every sort option cover the whole vault, not just what is on screen
+- [ ] Duration sort: non-videos (0:00) first when ascending and last when descending; equal durations order by file size
+- [ ] Video thumbnails show duration in the top-left corner
 - [ ] Locking clears decrypted thumbnail memory; thumbnails reload after unlock
 - [ ] Changing the passcode does not show a thumbnail decrypted under the old key
 - [ ] MetricKit diagnostic delivery records only its delivery date; no vault analytics or file metadata are logged

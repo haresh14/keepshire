@@ -91,7 +91,7 @@ No Bonjour services are advertised, so `NSBonjourServices` is not declared.
 | PhotosUI | `PHPickerViewController` (images + videos, limit 50) |
 | Photos | `PHAsset` import path on `FileStorageManager` / `PhotoImportService` (primary UI path is `PHPicker` + `VaultImportService`) |
 | UniformTypeIdentifiers | MIME/UTI mapping; document picker types |
-| AVFoundation / AVKit | Video/audio playback, video thumbnails, player controls, `AVAudioSession` playback category for audio |
+| AVFoundation / AVKit | Video/audio playback, video thumbnails, video duration at import, player controls, `AVAudioSession` playback category for audio |
 | MediaPlayer | Imported in `AudioPreviewView` but unused (no Now Playing / remote commands) |
 | QuickLook | Document / unsupported file preview |
 | PDFKit | Document preview |
@@ -230,7 +230,7 @@ Changing tabs posts `TabDidChange`, which **clears multi-select** in list/grid s
 | F3 | Rename folder | Context menu (also Select / Move / Delete on selectable rows) | Core Data |
 | F4 | Delete folder | If trash on: nested **files** go to trash at **root** (`folder = nil`); folder records are deleted. If trash off: permanent cascade (`deleteFolderCompletely`) | Core Data + FileStorage |
 | F5 | Move folder | Folder picker; cannot move into self or descendants | `CoreDataManager.moveFolder` |
-| F6 | Sort folders and files | User Default, Name, Date, Size, Kind, Favorites + ascending/descending toggle | `FolderSortOption` |
+| F6 | Sort folders and files | User Default, Name, Date, Size, Duration, Kind, Favorites + ascending/descending toggle. Duration treats non-videos as 0 seconds, then orders equal durations by file size; folders use item count | `FolderSortOption` |
 | F7 | Empty state | Create folder / add files CTAs | `EmptyStateView` |
 | F8 | Swipe to delete | Trailing swipe on folder and file rows; full-swipe allowed only when trash is **off** | SwiftUI `swipeActions` |
 | F9 | Folder multi-select | Select All, Move, Delete on folders in selection mode | `FolderViewModel` |
@@ -261,10 +261,10 @@ MIME detection: `FileStorageManager.determineFileType(from:)` by extension; UTI 
 | O4 | Share / export | Decrypt to temp file → share sheet | `UIActivityViewController`, `ShareManager`, `prepareForSharing` |
 | O5 | Delete | Trash if enabled; else permanent delete of the Core Data row, the UUID blob, and the thumbnail | Core Data + FileStorage |
 | O6 | Search | **Gallery**, **Category files**, and the **Folder browser** use SwiftUI `.searchable`. Folder search matches decrypted file names and immediate child-folder names. | SwiftUI searchable |
-| O7 | Sort files | User Default, Name, Size, Date, Kind, Favorites | `SortOption` / `FolderSortOption` |
+| O7 | Sort files | User Default, Name, Size, Date, Duration, Kind, Favorites. Duration treats non-videos as 0 seconds, then orders equal durations by file size | `SortOption` / `FolderSortOption` |
 | O8 | Multi-select | Long-press or “Select”; Select All; Favorite, Share, Move, Delete | Selection toolbars / floating bar |
 | O9 | Context menu (file) | Select, Favorite/Unfavorite, Rename, Move, Share, Delete | SwiftUI contextMenu |
-| O10 | Grid / list presentation | Gallery grid (`VaultGridView` / `VaultItemCell`); folder rows | SwiftUI |
+| O10 | Grid / list presentation | Gallery grid (`VaultGridView` / `VaultItemCell`); folder rows. Video cells and folder-row thumbs show duration in the top-left corner | SwiftUI |
 
 Add Content sheet (Gallery and Folders, hidden on fake login): Photos & Videos, Files, Web Upload (Gallery also presents `WebUploadView` as a sheet), Create Folder (folders only). **Category files screens do not offer import/add.**
 
@@ -421,7 +421,8 @@ Fake login: **About only**.
 | id | UUID |
 | fileName, fileType, thumbnailFileName | String (empty at rest; decrypted into RAM after unlock) |
 | fileSize | Int64 (0 at rest; decrypted into RAM after unlock) |
-| sealedMetadata | Binary (AES-GCM JSON of name, MIME, size, thumbnail filename) |
+| durationSeconds | Double (0 at rest; decrypted into RAM after unlock). Set at import for videos from the media container; other files stay 0 |
+| sealedMetadata | Binary (AES-GCM JSON of name, MIME, size, thumbnail filename, duration) |
 | isFavorite, isTrashed | Bool (default false) |
 | createdAt, updatedAt, trashedAt | Date |
 | folder | to-one Folder, **nullify** |
@@ -508,7 +509,7 @@ Use this for iOS 27, 28, 29, or any Xcode bump. Check every box against a **devi
 - [ ] Duplicate and rename-collision behavior unchanged
 - [ ] Nested folders: create, rename, move (no cycle), delete + trash rules, swipe-to-delete
 - [ ] Gallery, Category, and Folder search (file and immediate child-folder names)
-- [ ] Sort, multi-select, share, favorite (Gallery, Folders, Categories)
+- [ ] Sort (including Duration), multi-select, share, favorite (Gallery, Folders, Categories)
 - [ ] Categories counts and filters
 - [ ] Trash restore / empty / disable-with-contents alert
 

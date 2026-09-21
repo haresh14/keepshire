@@ -103,6 +103,48 @@ struct VaultMainViewModelTests {
         #expect(viewModel.mediaViewerIndex == 1)
     }
 
+    @Test func durationSortPutsVideosByLengthThenOthersBySize() throws {
+        let coreData = TestCoreDataStore.reset()
+        let shortVideo = coreData.createVaultItem(fileType: "video/mp4", fileName: "short.mp4", folder: nil)!
+        shortVideo.durationSeconds = 5
+        shortVideo.fileSize = 9_000_000
+        let longVideo = coreData.createVaultItem(fileType: "video/mp4", fileName: "long.mp4", folder: nil)!
+        longVideo.durationSeconds = 60
+        longVideo.fileSize = 1_000_000
+        let sameLengthLarge = coreData.createVaultItem(fileType: "video/mp4", fileName: "same-large.mp4", folder: nil)!
+        sameLengthLarge.durationSeconds = 5
+        sameLengthLarge.fileSize = 12_000_000
+        let smallPhoto = coreData.createVaultItem(fileType: "image/jpeg", fileName: "small.jpg", folder: nil)!
+        smallPhoto.fileSize = 100
+        let largePhoto = coreData.createVaultItem(fileType: "image/jpeg", fileName: "large.jpg", folder: nil)!
+        largePhoto.fileSize = 500
+        try coreData.save()
+
+        let viewModel = VaultMainViewModel(
+            coreDataManager: coreData,
+            fileStorageManager: FakeFileStorageManager(coreDataManager: coreData),
+            loginStateManager: FakeLoginStateManager()
+        )
+        viewModel.sortOption = .duration
+        viewModel.sortAscending = true
+        #expect(viewModel.filteredItems.map(\.fileName) == [
+            "small.jpg",
+            "large.jpg",
+            "short.mp4",
+            "same-large.mp4",
+            "long.mp4"
+        ])
+
+        viewModel.sortAscending = false
+        #expect(viewModel.filteredItems.map(\.fileName) == [
+            "long.mp4",
+            "same-large.mp4",
+            "short.mp4",
+            "large.jpg",
+            "small.jpg"
+        ])
+    }
+
     /// fileType is nil in the store once metadata is sealed, so the gallery has to
     /// filter media after the fetch reveals it. Every other gallery test uses a fake
     /// storage manager and never seals, which hides that difference.

@@ -33,6 +33,31 @@ struct FolderViewModelTests {
         #expect(viewModel.showUnifiedMediaViewer)
     }
 
+    @Test func durationSortUsesVideoLengthAndFileSizeForOtherFiles() throws {
+        let coreData = TestCoreDataStore.reset()
+        let photo = coreData.createVaultItem(fileType: "image/jpeg", fileName: "photo.jpg", folder: nil)!
+        photo.fileSize = 200
+        let shortVideo = coreData.createVaultItem(fileType: "video/quicktime", fileName: "clip.mov", folder: nil)!
+        shortVideo.durationSeconds = 3
+        shortVideo.fileSize = 8_000_000
+        let pdf = coreData.createVaultItem(fileType: "application/pdf", fileName: "notes.pdf", folder: nil)!
+        pdf.fileSize = 50
+        try coreData.save()
+
+        let viewModel = FolderViewModel(
+            folder: nil,
+            coreDataManager: coreData,
+            fileStorageManager: FakeFileStorageManager(coreDataManager: coreData),
+            loginStateManager: FakeLoginStateManager()
+        )
+        viewModel.sortOption = .duration
+        viewModel.sortAscending = true
+        #expect(viewModel.sortedFiles.map(\.fileName) == ["notes.pdf", "photo.jpg", "clip.mov"])
+
+        viewModel.sortAscending = false
+        #expect(viewModel.sortedFiles.map(\.fileName) == ["clip.mov", "photo.jpg", "notes.pdf"])
+    }
+
     @Test func fakeVaultFiltersContent() {
         let coreData = TestCoreDataStore.reset()
         _ = coreData.createVaultItem(fileType: "image/jpeg", fileName: "Hidden.jpg", folder: nil)

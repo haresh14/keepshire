@@ -47,9 +47,18 @@ struct VaultItemCell: View {
                         .foregroundColor(getFileIconColor(for: item))
                 }
                 
-                // File type indicator
                 if item.isVideo {
                     VStack {
+                        HStack {
+                            Text(item.formattedDuration)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color.black.opacity(0.65))
+                                .cornerRadius(3)
+                            Spacer()
+                        }
                         Spacer()
                         HStack {
                             Image(systemName: "video.fill")
@@ -60,8 +69,8 @@ struct VaultItemCell: View {
                                 .cornerRadius(4)
                             Spacer()
                         }
-                        .padding(4)
                     }
+                    .padding(4)
                 } else if item.isDocument || item.isAudio {
                     VStack {
                         Spacer()
@@ -121,7 +130,7 @@ struct VaultItemCell: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("file.\(item.id?.uuidString ?? item.fileName ?? "unknown")")
-        .accessibilityLabel(item.fileName ?? "Unnamed file")
+        .accessibilityLabel(videoAccessibilityLabel)
         .accessibilityValue(isSelected ? "Selected" : item.fileType ?? "File")
         .onTapGesture {
             onTap()
@@ -140,6 +149,12 @@ struct VaultItemCell: View {
     
     // MARK: - Helper Methods
     
+    private var videoAccessibilityLabel: String {
+        let name = item.fileName ?? "Unnamed file"
+        guard item.isVideo else { return name }
+        return "\(name), \(item.formattedDuration)"
+    }
+
     private func getFileIcon(for item: VaultItem) -> String {
         if item.isImage {
             return "photo.fill"

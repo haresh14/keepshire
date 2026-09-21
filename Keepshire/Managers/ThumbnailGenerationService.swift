@@ -1,7 +1,13 @@
 import Foundation
 import UIKit
 import AVFoundation
+import CoreMedia
 import CryptoKit
+
+struct GeneratedVideoThumbnail {
+    let fileName: String?
+    let durationSeconds: Double
+}
 
 final class ThumbnailGenerationService {
     private let fileManager: FileManager
@@ -30,7 +36,7 @@ final class ThumbnailGenerationService {
         storageKey: String,
         displayFileName: String,
         key: SymmetricKey
-    ) throws -> String? {
+    ) throws -> GeneratedVideoThumbnail {
         let originalExtension = (displayFileName as NSString).pathExtension
         let tempFileName = UUID().uuidString
             + (originalExtension.isEmpty ? ".mov" : ".\(originalExtension)")
@@ -50,11 +56,15 @@ final class ThumbnailGenerationService {
         storageKey: String,
         displayFileName: String,
         key: SymmetricKey
-    ) throws -> String? {
+    ) throws -> GeneratedVideoThumbnail {
         let asset = AVURLAsset(url: fileURL)
+        let durationSeconds = Self.durationSeconds(from: asset)
         // Intentionally retained for behavior compatibility; modernization is a later wave.
         guard !asset.tracks(withMediaType: .video).isEmpty else {
-            return generateGenericVideoThumbnail(storageKey: storageKey, displayFileName: displayFileName, key: key)
+            return GeneratedVideoThumbnail(
+                fileName: generateGenericVideoThumbnail(storageKey: storageKey, displayFileName: displayFileName, key: key),
+                durationSeconds: durationSeconds
+            )
         }
 
         let generator = AVAssetImageGenerator(asset: asset)
@@ -73,13 +83,25 @@ final class ThumbnailGenerationService {
                 let cgImage = try generator.copyCGImage(at: time, actualTime: nil)
                 let thumbnail = UIImage(cgImage: cgImage)
                 if let thumbnailData = thumbnail.jpegData(compressionQuality: 0.7) {
-                    return try write(thumbnailData, storageKey: storageKey, key: key)
+                    return GeneratedVideoThumbnail(
+                        fileName: try write(thumbnailData, storageKey: storageKey, key: key),
+                        durationSeconds: durationSeconds
+                    )
                 }
             } catch {
                 VaultLog.debug("DEBUG: Error generating video thumbnail at time \(time.seconds): \(error)")
             }
         }
-        return generateGenericVideoThumbnail(storageKey: storageKey, displayFileName: displayFileName, key: key)
+        return GeneratedVideoThumbnail(
+            fileName: generateGenericVideoThumbnail(storageKey: storageKey, displayFileName: displayFileName, key: key),
+            durationSeconds: durationSeconds
+        )
+    }
+
+    static func durationSeconds(from asset: AVAsset) -> Double {
+        let seconds = CMTimeGetSeconds(asset.duration)
+        guard seconds.isFinite, seconds > 0 else { return 0 }
+        return seconds
     }
 
     private func generateGenericVideoThumbnail(

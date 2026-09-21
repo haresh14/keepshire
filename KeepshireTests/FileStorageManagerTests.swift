@@ -570,6 +570,27 @@ struct FileStorageManagerTests {
         #expect(try manager.loadFile(vaultItem: item).isEmpty == false)
     }
 
+    @Test func sealedMetadataRoundTripsVideoDuration() async throws {
+        let storage = try makeStorage()
+        let manager = storage.fileStorageManager
+        manager.setupEncryptionKey(from: "duration-key")
+        let item = try storage.coreDataManager.createVaultItem(
+            fileName: "clip.mp4",
+            fileType: "video/mp4",
+            fileSize: 2048,
+            durationSeconds: 12.5
+        )
+
+        #expect(item.durationSeconds == 12.5)
+        let stored = try storedValues("durationSeconds", entity: "VaultItem", context: storage.coreDataManager.context)
+        #expect(stored.allSatisfy { ($0 as? Double) == 0 || ($0 as? NSNumber)?.doubleValue == 0 })
+
+        storage.coreDataManager.context.refresh(item, mergeChanges: false)
+        #expect(item.fileName == "clip.mp4")
+        #expect(item.durationSeconds == 12.5)
+        #expect(item.isVideo)
+    }
+
     /// Guards the cost of decrypting metadata for a large vault on unlock and on a cold fetch.
     @Test func testSealedMetadataScalesToLargeVaults() async throws {
         let storage = try makeStorage()
