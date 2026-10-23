@@ -103,6 +103,14 @@ launchctl bootout gui/$(id -u)/com.keepshire.install-on-device
 
 At 11:00 you must be logged in to the Mac (a locked screen is fine), and the iPhone must be reachable by cable or the same Wi‑Fi, preferably unlocked.
 
+### Verifying the schedule
+
+1. **Loaded?** `launchctl list | grep keepshire` should print `-  0  com.keepshire.install-on-device`. `-` means not running right now; `0` is the last exit code (success). No output means the agent is not loaded.
+2. **Triggers registered?** In `launchctl print gui/$(id -u)/com.keepshire.install-on-device`, `event triggers` should list five `com.apple.launchd.calendarinterval` entries with `Hour => 11`, `Minute => 0`, and `Weekday` 1–5. `runs` counts completed runs and `last exit code` should be `0`.
+3. **Installed?** `tail -20 ~/Library/Logs/keepshire-install.log` shows timestamped lines for each run, ending with `Done`.
+
+After a scheduled run, `runs` goes up by one and the log has a new entry stamped around 11:00 (or at wake time if the Mac was asleep).
+
 Troubleshooting:
 - `Bootstrap failed: 5: Input/output error`: the agent is already loaded. Confirm with `launchctl print` above, or `bootout` and `bootstrap` again.
 - `Operation not permitted` in the log: give `/bin/zsh` Full Disk Access in System Settings → Privacy & Security.
