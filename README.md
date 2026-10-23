@@ -34,6 +34,80 @@ The marketing site is at [keepshire.haresh.dev](https://keepshire.haresh.dev). S
 
 New to Xcode? See [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for opening the project, signing, and troubleshooting.
 
+## Install on a device from the command line
+
+[install-on-device.sh](install-on-device.sh) builds the `Keepshire` scheme (Debug) and installs it on a physical iPhone with `xcrun devicectl`. It does not launch the app; open it from the Home Screen.
+
+```sh
+./install-on-device.sh            # first paired physical iPhone (simulators are skipped)
+./install-on-device.sh <UDID>     # a specific device
+```
+
+List devices and their identifiers with `xcrun devicectl list devices`.
+
+Before the first run:
+- Set a Team under Signing & Capabilities for both `Keepshire` and `KeepshireShare`, and sign in to your Apple ID in Xcode → Settings → Accounts. The script passes `-allowProvisioningUpdates`, so profiles are created automatically.
+- Turn on Developer Mode on the iPhone (Settings → Privacy & Security) and trust the Mac. After pairing once by cable, the device can also be reached over Wi‑Fi.
+- Run the script by hand once so any keychain or signing prompts can be answered.
+- With a free Apple ID, the installed app expires after 7 days.
+
+Build output goes to `build/DerivedData` (git-ignored).
+
+### Scheduling (weekdays at 11 AM)
+
+Use a LaunchAgent rather than cron: it runs in your login session, so code signing can reach the keychain, and a run missed while the Mac was asleep happens on wake. Save this as `~/Library/LaunchAgents/com.keepshire.install-on-device.plist`, replacing the script path and `<user>`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.keepshire.install-on-device</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/Keepshire/install-on-device.sh</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+    </array>
+    <key>StandardOutPath</key>
+    <string>/Users/<user>/Library/Logs/keepshire-install.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/<user>/Library/Logs/keepshire-install.log</string>
+</dict>
+</plist>
+```
+
+Weekdays 1–5 are Monday–Friday.
+
+```sh
+# Load
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.keepshire.install-on-device.plist
+
+# Run now (test)
+launchctl kickstart gui/$(id -u)/com.keepshire.install-on-device
+
+# Check status / follow the log
+launchctl print gui/$(id -u)/com.keepshire.install-on-device
+tail -f ~/Library/Logs/keepshire-install.log
+
+# Unload (required before bootstrapping an edited plist)
+launchctl bootout gui/$(id -u)/com.keepshire.install-on-device
+```
+
+At 11:00 you must be logged in to the Mac (a locked screen is fine), and the iPhone must be reachable by cable or the same Wi‑Fi, preferably unlocked.
+
+Troubleshooting:
+- `Bootstrap failed: 5: Input/output error`: the agent is already loaded. Confirm with `launchctl print` above, or `bootout` and `bootstrap` again.
+- `Operation not permitted` in the log: give `/bin/zsh` Full Disk Access in System Settings → Privacy & Security.
+- `does not contain a scheme named "Keepshire"`: build from `Keepshire.xcodeproj`, not a stray `Keepshire.xcworkspace` folder (which has no projects in it).
+
 ## Features
 
 ### Authentication and lock
@@ -121,5 +195,6 @@ A broader regression list is in [docs/FEATURES.md](docs/FEATURES.md#9-upgrade-ve
 - Feature behavior and OS-upgrade baseline: [docs/FEATURES.md](docs/FEATURES.md)
 - Component graph: [docs/COMPONENT_GRAPH.md](docs/COMPONENT_GRAPH.md)
 - Xcode basics: [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)
+- Command-line device install and scheduling: [Install on a device from the command line](#install-on-a-device-from-the-command-line)
 - Testing checklist: [docs/TESTING_CHECKLIST.md](docs/TESTING_CHECKLIST.md)
 - Troubleshooting: [docs/DEVELOPER_GUIDE.md#troubleshooting](docs/DEVELOPER_GUIDE.md#troubleshooting)
