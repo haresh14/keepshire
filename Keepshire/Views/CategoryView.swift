@@ -12,9 +12,8 @@ import CoreData
 struct CategoryView: View {
     /// Owns the data-loading logic so that this view remains declarative.
     @StateObject private var viewModel = CategoryViewModel()
-    @State private var selectedCategory: CategoryType?
-    @State private var previewItem: VaultItem?
-    @State private var previewMediaItems: [VaultItem] = []
+    /// iPad opens on All Files rather than an empty column.
+    @State private var selectedCategory: CategoryType? = .allFiles
 
     @Environment(\.managedObjectContext) var context
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -35,7 +34,6 @@ struct CategoryView: View {
                 List(CategoryType.allCases, id: \.self) { categoryType in
                     Button {
                         selectedCategory = categoryType
-                        clearPreview()
                     } label: {
                         HStack(spacing: 12) {
                             KeepshireIconTile(systemName: categoryType.systemImage, tint: categoryType.color, size: 32)
@@ -57,14 +55,12 @@ struct CategoryView: View {
                 .navigationTitle("Categories")
                 .keepshireBackground(hidesScrollBackground: true)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
-            } content: {
+            } detail: {
+                // Two columns: the grid gets the full width, and files open in the
+                // same full-screen viewer as on iPhone instead of a narrow third column.
                 if let selectedCategory {
-                    CategoryFilesView(
-                        categoryType: selectedCategory,
-                        onPreviewFile: showPreview
-                    )
-                    .id(selectedCategory)
-                    .navigationSplitViewColumnWidth(min: 360, ideal: 500)
+                    CategoryFilesView(categoryType: selectedCategory)
+                        .id(selectedCategory)
                 } else {
                     KeepshirePlaceholder(
                         title: "Select a Category",
@@ -72,12 +68,6 @@ struct CategoryView: View {
                         systemName: "square.grid.2x2.fill"
                     )
                 }
-            } detail: {
-                VaultPreviewDetail(
-                    item: previewItem,
-                    mediaItems: previewMediaItems,
-                    onClose: clearPreview
-                )
             }
         } else {
             NavigationStack {
@@ -112,15 +102,6 @@ struct CategoryView: View {
         .navigationBarTitleDisplayMode(.large)
     }
 
-    private func showPreview(_ item: VaultItem, mediaItems: [VaultItem]) {
-        previewItem = item
-        previewMediaItems = mediaItems
-    }
-
-    private func clearPreview() {
-        previewItem = nil
-        previewMediaItems = []
-    }
     
     // loadVaultItems removed – logic now lives in CategoryViewModel.
 }

@@ -116,8 +116,9 @@ Simulator: Features → Face ID → Enrolled / Matching Face / Non-matching Face
 
 ## iPad and localization
 
-- [ ] Regular-width iPad Folder tab shows the nested folder outline, folder content, and selected-file preview; sidebar and breadcrumbs stay synchronized
-- [ ] Gallery and Trash show grid + preview detail; Categories show category + files + preview columns
+- [ ] Regular-width iPad Folder tab shows the nested folder outline beside full-width folder content; sidebar and breadcrumbs stay synchronized
+- [ ] Gallery and Trash show a full-width grid; Categories show the category sidebar (All Files selected first) beside a full-width grid
+- [ ] On iPad, tapping a photo, video, or document in any tab opens the full-screen viewer; pinch, double-tap, swipe, and close work as on iPhone
 - [ ] Settings sidebar opens Authentication, Security, Data/Trash, Web/Background, and About without exposing full settings in the fake vault
 - [ ] Media and document previews have an explicit close control and file information remains usable with pointer/keyboard input
 - [ ] Web Upload and shared sheets use readable form widths rather than stretching edge to edge

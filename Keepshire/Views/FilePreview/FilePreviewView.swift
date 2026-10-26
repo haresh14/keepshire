@@ -211,36 +211,6 @@ struct FilePreviewView: View {
     }
 }
 
-struct VaultPreviewDetail: View {
-    let item: VaultItem?
-    let mediaItems: [VaultItem]
-    let onClose: () -> Void
-
-    var body: some View {
-        Group {
-            if let item {
-                if item.isImage || item.isVideo {
-                    let availableMedia = mediaItems.isEmpty ? [item] : mediaItems
-                    let initialIndex = availableMedia.firstIndex(of: item) ?? 0
-                    UnifiedMediaViewerView(
-                        mediaItems: availableMedia,
-                        initialIndex: initialIndex,
-                        onDismiss: onClose
-                    )
-                } else {
-                    FilePreviewView(vaultItem: item, onClose: onClose)
-                }
-            } else {
-                KeepshirePlaceholder(
-                    title: "Select a File",
-                    message: "Choose a photo, video, or document to preview it here."
-                )
-            }
-        }
-        .id(item?.objectID)
-    }
-}
-
 // MARK: - Preview Support
 
 #Preview {

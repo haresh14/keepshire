@@ -23,12 +23,10 @@ struct VaultMainView: View {
     @State private var showRenameAlert = false
     @State private var renameText = ""
     @State private var itemToRename: VaultItem?
-    @State private var previewItem: VaultItem?
     
     // MARK: - Environment
     
     @Environment(\.managedObjectContext) var context
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     init(dependencies: DependencyContainer = .shared) {
         _viewModel = StateObject(wrappedValue: VaultMainViewModel(dependencies: dependencies))
@@ -37,33 +35,11 @@ struct VaultMainView: View {
     // MARK: - Body
     
     var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                NavigationSplitView {
-                    galleryContent
-                    .navigationSplitViewColumnWidth(min: 420, ideal: 620)
-                } detail: {
-                    VaultPreviewDetail(
-                        item: previewItem,
-                        mediaItems: viewModel.getMediaFiles(),
-                        onClose: { previewItem = nil }
-                    )
-                }
-            } else {
-                NavigationStack {
-                    galleryContent
-                }
-            }
-        }
-        .onChange(of: horizontalSizeClass) { _, sizeClass in
-            if sizeClass == .regular {
-                viewModel.showUnifiedMediaViewer = false
-                viewModel.mediaViewerIndex = -1
-                viewModel.showFilePreview = false
-                viewModel.filePreviewItem = nil
-            } else {
-                previewItem = nil
-            }
+        // One full-width grid on every device. On iPad a tap opens the same
+        // immersive full-screen viewer as on iPhone, as Photos does, instead of
+        // squeezing the grid and the photo into two columns.
+        NavigationStack {
+            galleryContent
         }
     }
 
@@ -237,8 +213,6 @@ struct VaultMainView: View {
     private func handleItemTap(_ item: VaultItem) {
         if viewModel.isSelectionMode {
             viewModel.toggleSelection(for: item)
-        } else if horizontalSizeClass == .regular {
-            previewItem = item
         } else {
             viewModel.viewItem(item)
         }

@@ -12,8 +12,6 @@ struct FolderView: View {
     @State private var navigationPath = NavigationPath()
     @State private var compactNavigationPath = NavigationPath()
     @State private var selectedFolder: Folder?
-    @State private var previewItem: VaultItem?
-    @State private var previewMediaItems: [VaultItem] = []
     @StateObject private var loginStateManager = LoginStateManager.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.managedObjectContext) var context
@@ -74,21 +72,15 @@ struct FolderView: View {
                 .navigationTitle("Folders")
                 .keepshireBackground(hidesScrollBackground: true)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
-                } content: {
+                } detail: {
+                // Two columns: the list gets the full width, and files open in the
+                // same full-screen viewer as on iPhone instead of a narrow third column.
                 FolderContentView(
                     folder: selectedFolder,
                     navigationPath: $navigationPath,
-                    onNavigateToFolder: select,
-                    onPreviewFile: showPreview
+                    onNavigateToFolder: select
                 )
                 .id(selectedFolder?.objectID)
-                .navigationSplitViewColumnWidth(min: 360, ideal: 500)
-                } detail: {
-                VaultPreviewDetail(
-                    item: previewItem,
-                    mediaItems: previewMediaItems,
-                    onClose: clearPreview
-                )
                 }
             } else {
                 NavigationStack(path: $compactNavigationPath) {
@@ -113,17 +105,6 @@ struct FolderView: View {
     private func select(_ folder: Folder?) {
         selectedFolder = folder
         navigationPath = NavigationPath()
-        clearPreview()
-    }
-
-    private func showPreview(_ item: VaultItem, mediaItems: [VaultItem]) {
-        previewItem = item
-        previewMediaItems = mediaItems
-    }
-
-    private func clearPreview() {
-        previewItem = nil
-        previewMediaItems = []
     }
 
     private var sidebarItems: [FolderSidebarItem] {

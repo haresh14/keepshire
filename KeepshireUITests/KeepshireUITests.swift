@@ -41,6 +41,11 @@ final class KeepshireUITests: XCTestCase {
 
         tabs["tab.settings"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+        // On iPad, Settings is a split view and the toggle lives under Security.
+        let securityPane = app.collectionViews["Sidebar"].staticTexts["Security"]
+        if securityPane.exists {
+            securityPane.tap()
+        }
         let screenshotProtection = app.switches["settings.screenshotProtection"]
         for _ in 0..<3 where !screenshotProtection.exists {
             app.swipeUp()

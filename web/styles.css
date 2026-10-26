@@ -1,18 +1,41 @@
+/* Keepshire site — matches the app: deep-teal splash, teal→green brand glow,
+   rounded type, raised cards and tinted icon tiles on a soft grouped background. */
+
 :root {
-  --teal: #1494b8;
-  --teal-deep: #0b6f8c;
-  --teal-ink: #0a3d4d;
-  --lime: #8ed14a;
-  --mint: #5ee0c0;
-  --lock: #3ec4e8;
-  --paper: whitesmoke;
-  --card: #fff;
-  --line: rgba(10, 61, 77, 0.12);
-  --muted: #3d6a78;
-  --shadow: 0 24px 60px rgba(10, 111, 140, 0.18);
-  --radius: 28px;
-  --max: 1080px;
-  --sans: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --deep: #052a30;          /* LaunchBackground in the app */
+  --deep-2: #0b3a3f;
+  --teal: #079aac;          /* icon sweep */
+  --mint: #2cddae;
+  --green: #76d55c;
+  --accent: #007797;        /* AccentColor */
+  --action-a: #006e8a;      /* actionGradient */
+  --action-b: #0a866e;
+
+  --bg: #f2f2f7;            /* systemGroupedBackground */
+  --card: #ffffff;          /* secondarySystemGroupedBackground */
+  --ink: #0f1d20;
+  --muted: #5b6b70;
+  --line: rgba(15, 29, 32, 0.08);
+  --shadow: 0 10px 30px rgba(5, 42, 48, 0.08);
+  --tile: rgba(0, 119, 151, 0.12);
+
+  --radius: 22px;
+  --max: 1120px;
+  --rounded: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+  --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #34c8de;
+    --bg: #000000;
+    --card: #1c1c1e;
+    --ink: #f2f5f5;
+    --muted: #9aa8ab;
+    --line: rgba(255, 255, 255, 0.08);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --tile: rgba(52, 200, 222, 0.16);
+  }
 }
 
 *,
@@ -27,20 +50,37 @@ html {
 
 body {
   margin: 0;
-  font-family: var(--sans);
-  color: var(--teal-ink);
-  background: whitesmoke;
+  font-family: var(--text);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Soft brand tint across the top of light pages, as in the app. */
+.page {
   min-height: 100vh;
-  line-height: 1.55;
+  background:
+    linear-gradient(180deg, rgba(7, 154, 172, 0.16), rgba(118, 213, 92, 0.05) 260px, transparent 440px),
+    var(--bg);
 }
 
 a {
-  color: var(--teal-deep);
+  color: var(--accent);
 }
 
 img {
   max-width: 100%;
+  height: auto;
   display: block;
+}
+
+h1,
+h2,
+h3,
+.brand {
+  font-family: var(--rounded);
+  letter-spacing: -0.02em;
 }
 
 .wrap {
@@ -48,18 +88,16 @@ img {
   margin-inline: auto;
 }
 
-.site-header,
-.site-footer {
-  width: min(var(--max), calc(100% - 32px));
-  margin: 0 auto;
-}
+/* ---------- Header ---------- */
 
 .site-header {
+  width: min(var(--max), calc(100% - 32px));
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 0 8px;
+  padding: 20px 0;
 }
 
 .brand {
@@ -69,58 +107,130 @@ img {
   text-decoration: none;
   color: inherit;
   font-weight: 800;
-  letter-spacing: -0.03em;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
 }
 
 .brand img {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  box-shadow: 0 8px 18px rgba(10, 61, 77, 0.2);
+  width: 40px;
+  height: 40px;
 }
 
 nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 nav a {
   text-decoration: none;
-  color: var(--teal-ink);
-  font-weight: 600;
+  color: var(--ink);
+  font-family: var(--rounded);
+  font-weight: 700;
   font-size: 0.95rem;
   padding: 8px 14px;
   border-radius: 999px;
-  background: #fff;
-  border: 1px solid var(--line);
 }
 
-nav a:hover,
-nav a[aria-current="page"] {
-  background: #fff;
+nav a:hover {
+  background: var(--tile);
 }
+
+nav a[aria-current="page"] {
+  background: var(--tile);
+  color: var(--accent);
+}
+
+/* ---------- Hero (splash look) ---------- */
 
 .hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: var(--deep);
+  border-radius: 0 0 36px 36px;
+}
+
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.hero::before {
+  width: 560px;
+  height: 560px;
+  background: var(--teal);
+  top: -120px;
+  left: 8%;
+}
+
+.hero::after {
+  width: 480px;
+  height: 480px;
+  background: var(--green);
+  bottom: -220px;
+  right: 6%;
+}
+
+.hero .site-header,
+.hero-body {
+  position: relative;
+  z-index: 1;
+}
+
+.hero nav a {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.hero-body {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 40px;
   align-items: center;
-  padding: 48px 0 28px;
+  padding: 40px 0 72px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-family: var(--rounded);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hero h1 {
-  margin: 0 0 12px;
-  font-size: clamp(2.4rem, 5vw, 4.1rem);
-  line-height: 1.05;
-  letter-spacing: -0.045em;
+  margin: 0 0 14px;
+  font-size: clamp(2.3rem, 4.2vw, 3.7rem);
+  line-height: 1.04;
+  font-weight: 800;
+}
+
+.hero h1 .glow {
+  background: linear-gradient(90deg, var(--mint), var(--green));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .lede {
-  font-size: 1.2rem;
-  color: var(--teal-ink);
-  max-width: 34rem;
+  font-size: 1.15rem;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 32rem;
   margin: 0 0 28px;
 }
 
@@ -134,91 +244,226 @@ nav a[aria-current="page"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 22px;
+  border-radius: 16px;
+  font-family: var(--rounded);
+  font-weight: 800;
   text-decoration: none;
-  border-radius: 999px;
-  padding: 12px 20px;
-  font-weight: 700;
-  border: 0;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 .btn-primary {
-  background: var(--teal-ink);
   color: #fff;
+  background: linear-gradient(90deg, var(--action-a), var(--action-b));
+  box-shadow: 0 10px 24px rgba(7, 154, 172, 0.35);
 }
 
 .btn-ghost {
-  background: #fff;
-  color: var(--teal-ink);
-  border: 1px solid var(--line);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
-.icon-stage {
-  justify-self: center;
-  width: min(360px, 100%);
-  aspect-ratio: 1;
-  border-radius: 36px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  background: linear-gradient(135deg, #14a0c4, #8ed14a);
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
-.icon-stage img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* Three real app screens, the centre one raised, like the App Store art. */
+.phones {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 520px;
+  /* Overlap the side phones under the centre one instead of into the text. */
+  gap: 0;
 }
 
-.panel {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 28px;
-  box-shadow: var(--shadow);
+.phone {
+  width: clamp(150px, 17vw, 210px);
+  border-radius: 34px;
+  padding: 7px;
+  background: #0d1416;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+.phone img {
+  border-radius: 28px;
+}
+
+.phone.side {
+  width: clamp(126px, 14.5vw, 184px);
+  opacity: 0.92;
+}
+
+.phone.left {
+  transform: translateX(28%) rotate(-6deg);
+}
+
+.phone.right {
+  transform: translateX(-28%) rotate(6deg);
+}
+
+.phone.centre {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-14px);
+}
+
+/* ---------- Sections ---------- */
+
+.section {
+  padding: 64px 0 8px;
+}
+
+.section-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 32px;
+}
+
+.section-head h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+  font-weight: 800;
+}
+
+.section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  padding: 8px 0 40px;
 }
 
-.grid article h2,
-.legal h2 {
-  margin: 0 0 8px;
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.card h3 {
+  margin: 14px 0 6px;
   font-size: 1.15rem;
-  letter-spacing: -0.03em;
+  font-weight: 800;
 }
 
-.grid p,
-.legal p,
-.legal li {
+.card p {
   margin: 0;
   color: var(--muted);
 }
 
+/* Icon tile: SF-Symbol-like glyph in a tinted rounded square. */
+.tile {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--tile);
+  color: var(--accent);
+}
+
+.tile svg {
+  width: 22px;
+  height: 22px;
+}
+
+.tile.filled {
+  color: #fff;
+  background: linear-gradient(135deg, var(--action-a), var(--action-b));
+}
+
+.card.honest {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.card.honest .tile {
+  flex: none;
+  background: rgba(255, 149, 0, 0.14);
+  color: #ff9500;
+}
+
+.card.honest h3 {
+  margin-top: 0;
+}
+
+/* Closing band, the splash colours again. */
+.cta {
+  margin: 64px auto 0;
+  padding: 44px 32px;
+  text-align: center;
+  color: #fff;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(7, 154, 172, 0.55), transparent 55%),
+    radial-gradient(circle at 85% 100%, rgba(118, 213, 92, 0.45), transparent 55%),
+    var(--deep);
+}
+
+.cta img {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+}
+
+.cta h2 {
+  margin: 0 0 6px;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.cta p {
+  margin: 0 0 22px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- Legal / support pages ---------- */
+
 .legal {
-  margin: 24px auto 56px;
-  max-width: 760px;
+  margin: 16px auto 56px;
+  max-width: 780px;
+  padding: 36px;
 }
 
 .legal header {
-  margin-bottom: 24px;
+  margin-bottom: 8px;
 }
 
 .legal h1 {
   margin: 0 0 8px;
-  letter-spacing: -0.04em;
-  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  font-weight: 800;
 }
 
 .legal h2 {
-  margin-top: 28px;
+  margin: 30px 0 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
 }
 
 .legal p,
 .legal ul {
   margin: 0 0 14px;
+  color: var(--muted);
+}
+
+.legal li {
+  margin-bottom: 6px;
 }
 
 .meta {
@@ -226,40 +471,109 @@ nav a[aria-current="page"] {
   font-size: 0.95rem;
 }
 
-.site-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 0 36px;
-  color: var(--teal-ink);
-  font-size: 0.92rem;
-}
-
-.site-footer a {
-  color: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  margin-left: 12px;
-}
-
 .note {
   font-size: 0.92rem;
   color: var(--muted);
 }
 
-@media (max-width: 840px) {
-  .hero,
+/* ---------- Footer ---------- */
+
+.site-footer {
+  width: min(var(--max), calc(100% - 32px));
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 40px 0 36px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.site-footer .brand {
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.site-footer .brand img {
+  width: 28px;
+  height: 28px;
+}
+
+.site-footer nav a {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 900px) {
+  .hero-body {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 24px 0 48px;
+  }
+
+  .lede {
+    margin-inline: auto;
+  }
+
+  .hero-actions {
+    justify-content: center;
+  }
+
+  .phones {
+    min-height: 0;
+    margin-top: 8px;
+  }
+
+  .phone {
+    width: 160px;
+  }
+
+  .phone.side {
+    width: 136px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .site-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .phone.side {
+    display: none;
+  }
+
+  .phone {
+    width: 200px;
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }
 
-  .hero {
-    padding-top: 24px;
+  .legal {
+    padding: 24px;
   }
 
-  .icon-stage {
-    order: -1;
-    width: min(240px, 70%);
+  .card.honest {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .btn {
+    transition: none;
   }
 }
