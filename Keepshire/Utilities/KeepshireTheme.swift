@@ -34,6 +34,25 @@ enum KeepshireTheme {
         endPoint: .bottomTrailing
     )
 
+    /// Deep teal behind the launch screen and splash (`LaunchBackground` in the
+    /// asset catalog, so the static launch image and the splash match exactly).
+    static let launchBackground = Color("LaunchBackground")
+
+    /// Darker cut of the sweep for filled buttons and selected tiles. Dark enough
+    /// that white text stays readable in light and dark mode.
+    static let actionGradient = LinearGradient(
+        colors: [
+            Color(red: 0x00 / 255, green: 0x6E / 255, blue: 0x8A / 255),
+            Color(red: 0x0A / 255, green: 0x86 / 255, blue: 0x6E / 255)
+        ],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
+    /// Glow colours for the splash and setup hero.
+    static let glowTeal = iconTeal
+    static let glowGreen = iconGreen
+
     /// Opaque, dark variant of the sweep. Used for the privacy cover, which must
     /// hide the vault completely while still looking like Keepshire.
     static let brandScrim = LinearGradient(

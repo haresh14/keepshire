@@ -15,7 +15,7 @@ Face ID, local network, and launch screen strings are already in `Keepshire/Info
 ## First launch
 
 1. [ ] Delete the app (or use DEBUG Settings → Simulate First Launch Cleanup)
-2. [ ] Launch: logo launch screen, then the animated splash (logo pop, ring, wordmark) fades into **Security Setup** with no jump; light and dark
+2. [ ] Launch: logo on deep teal, then the animated splash (glow, wordmark and tagline, zoom-through exit) into **Security Setup**; the logo does not jump at the handoff and the status bar stays light; light and dark
 3. [ ] **Security Setup** shows 4-digit passcode, 6-digit passcode, and password; cards and Continue have the same width on iPhone and iPad
 4. [ ] Continue into setup:
    - [ ] 4-digit: exact length, confirm match

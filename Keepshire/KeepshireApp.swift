@@ -82,7 +82,9 @@ private struct KeepshireRootView: View {
             .overlay {
                 // Cold launch only; it ignores touches, so the UI underneath is live.
                 if isShowingSplash {
-                    SplashView { isShowingSplash = false }
+                    SplashView {
+                        withAnimation(.smooth(duration: 0.25)) { isShowingSplash = false }
+                    }
                 }
             }
             .onAppear {

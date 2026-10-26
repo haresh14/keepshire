@@ -71,7 +71,7 @@ These values live in App Store Connect, not in the binary (except the home-scree
 | `UIBackgroundModes` | Not declared | In-flight LAN uploads use finite `beginBackgroundTask` time |
 | Scene manifest | Multiple scenes disabled | One SwiftUI `WindowGroup`; no second unlocked vault window |
 | Policy / support URLs | `https://keepshire.haresh.dev/privacy`, `https://keepshire.haresh.dev/support` | Settings → About |
-| Launch screen | `UILaunchScreen` with `UIColorName` `LaunchBackground` and `UIImageName` `AppLogo` (120 pt rounded logo, centered) | An explicit dictionary is required when linking with iOS 27 SDK. `SplashView` starts from the same frame |
+| Launch screen | `UILaunchScreen` with `UIColorName` `LaunchBackground` (deep teal) and `UIImageName` `AppLogo` (120 pt rounded logo, centered); `UIStatusBarStyle` light content | An explicit dictionary is required when linking with iOS 27 SDK. `SplashView` starts from the same frame |
 | Signing | Automatic | Team `AYL8H487NP` |
 | Entitlements | App Group only | `group.dev.haresh.keepshire`; no iCloud, associated domains, or push entitlement |
 
@@ -129,7 +129,7 @@ No Bonjour services are advertised, so `NSBonjourServices` is not declared.
 
 ### 3.1 First launch
 
-Every cold launch shows the static launch screen (logo on `LaunchBackground`), then `SplashView`: the logo pops, a brand-gradient ring pulses out, the wordmark rises in, and the splash fades (about 1.4 s; a short cross-fade with Reduce Motion). The splash ignores touches, so the screen underneath is already interactive. It does not appear when returning from the background.
+Every cold launch shows the static launch screen (logo on the deep teal `LaunchBackground`), then `SplashView`: a teal-to-green glow blooms behind the logo as it settles, the wordmark and tagline rise in, and the splash exits with a zoom-through (the logo grows and fades as the app appears). About 1.9 s with non-bouncing curves; a short cross-fade with Reduce Motion. The splash ignores touches, so the screen underneath is already interactive. It does not appear when returning from the background.
 
 1. `AppDataManager.isFirstLaunch` is true.
 2. `performFirstLaunchCleanup()` wipes vault files and thumbnails, Keychain, UserDefaults (except launch flag), and Core Data.
@@ -169,7 +169,7 @@ Every item below is a **must-keep** behavior unless product explicitly drops it.
 
 | ID | Feature | User-visible behavior | Implementation | Apple APIs |
 |----|---------|----------------------|----------------|------------|
-| A1 | Choose auth type | First launch: 6-digit passcode is selected by default; 4-digit passcode and alphanumeric password remain available. The app logo, cards, and Continue share one column (20 pt margins, max 560 pt wide on iPad); Continue and the warning that forgotten credentials cannot be recovered are pinned to the bottom. | `AuthTypeSelectionView`, stored in UserDefaults `authenticationType` | SwiftUI |
+| A1 | Choose auth type | First launch: 6-digit passcode is selected by default; 4-digit passcode and alphanumeric password remain available. The page has no navigation bar: a brand-tinted hero (app logo, "Secure your vault") sits above raised cards, centred in the space above the footer. The selected card gets an accent border and tint and a gradient icon tile; 6-digit carries a "Recommended" badge. Hero, cards, and the gradient Continue button share one column (20 pt margins, max 520 pt wide on iPad); Continue and the warning that forgotten credentials cannot be recovered are pinned to the bottom. | `AuthTypeSelectionView`, stored in UserDefaults `authenticationType` | SwiftUI |
 | A2 | 4-digit passcode setup | Numeric only, exact length 4, confirm step, OTP-style fields + custom number pad. Explicitly described as weaker than 6-digit. | `PasscodeSetupView`, `OTPStylePasscodeView`, `CustomNumberPadView` | SwiftUI |
 | A3 | 6-digit passcode setup | Same as A2, length 6 | same | SwiftUI |
 | A4 | Password setup | Minimum **6** characters, confirmation, strength UI | `PasswordSetupView` | SwiftUI |
