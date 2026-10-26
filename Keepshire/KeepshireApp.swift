@@ -33,6 +33,7 @@ struct KeepshireApp: App {
     }
 
     private func configureUITestingStateIfNeeded() {
+        #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         guard arguments.contains("--ui-testing") else { return }
 
@@ -51,6 +52,7 @@ struct KeepshireApp: App {
             try? KeychainManager.shared.saveFakePassword("9876")
         }
         AppDataManager.shared.markAppAsLaunched()
+        #endif
     }
 }
 

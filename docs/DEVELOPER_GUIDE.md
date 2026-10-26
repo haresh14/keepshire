@@ -10,7 +10,7 @@ This guide provides detailed step-by-step instructions for common iOS developmen
 5. [Understanding the Project Structure](#understanding-the-project-structure)
 6. [Common Xcode Tasks](#common-xcode-tasks)
 
-The home-screen name is Keepshire (`CFBundleDisplayName`). The Xcode project is `Keepshire.xcodeproj` and the app source folder is `Keepshire`. Bundle ID is `com.haresh.keepshire`. That identifier is a new app: vault files and Keychain items from `com.haresh.FileVault` do not migrate.
+The home-screen name is Keepshire (`CFBundleDisplayName`). The Xcode project is `Keepshire.xcodeproj` and the app source folder is `Keepshire`. Bundle ID is `dev.haresh.keepshire`. That identifier is a new app: vault files and Keychain items from `com.haresh.FileVault` do not migrate.
 
 ## Opening the Project
 
@@ -31,7 +31,7 @@ Photo library access uses `PHPickerViewController`. Do not add `NSPhotoLibraryUs
 
 LAN web upload uses `NSLocalNetworkUsageDescription` in the same Info.plist.
 
-`Keepshire/PrivacyInfo.xcprivacy` declares the UserDefaults required-reason API with reason CA92.1. It declares no tracking and no collected data because the app has no account, analytics, or remote service. Re-audit the manifest whenever a dependency or required-reason API is added.
+`Keepshire/PrivacyInfo.xcprivacy` declares two required-reason APIs: UserDefaults with reason CA92.1, and file timestamps (`attributesOfItem`, used for the storage total in Settings) with reason C617.1. It declares no tracking and no collected data because the app has no account, analytics, or remote service. Re-audit the manifest whenever a dependency or required-reason API is added.
 
 Notification authorization is requested when the user starts Web Upload. Do not move it back to app launch or unlock.
 
@@ -58,7 +58,7 @@ Listing fields that are not in the binary:
 | Keywords | `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock` |
 | Privacy | `https://keepshire.haresh.dev/privacy` |
 | Support | `https://keepshire.haresh.dev/support` |
-| Bundle ID | `com.haresh.keepshire` |
+| Bundle ID | `dev.haresh.keepshire` |
 | SKU (your choice) | `keepshire` |
 | Primary language | English (US) |
 
@@ -78,13 +78,13 @@ These steps require your Apple ID and cannot be finished from this repo. They ar
 1. Open [developer.apple.com/account/resources/identifiers/list](https://developer.apple.com/account/resources/identifiers/list).
 2. Click **+** → **App IDs** → **App**.
 3. Description: `Keepshire`.
-4. Bundle ID: **Explicit** `com.haresh.keepshire`.
+4. Bundle ID: **Explicit** `dev.haresh.keepshire`.
 5. Enable **App Groups**. Leave Push, Associated Domains, and iCloud off.
 6. Register.
-7. Return to Identifiers and create another explicit App ID: `com.haresh.keepshire.share`, description `Keepshire Share`. Enable **App Groups**.
-8. Identifiers → **App Groups** → **+**. Register `group.com.haresh.keepshire`.
-9. Open both App IDs, configure App Groups, and select `group.com.haresh.keepshire`.
-10. In Xcode, select both the **Keepshire** and **KeepshireShare** targets → **Signing & Capabilities** → Team = your team → **Automatically manage signing**. Confirm the App Groups capability lists `group.com.haresh.keepshire`. The first device build may ask you to allow certificates.
+7. Return to Identifiers and create another explicit App ID: `dev.haresh.keepshire.share`, description `Keepshire Share`. Enable **App Groups**.
+8. Identifiers → **App Groups** → **+**. Register `group.dev.haresh.keepshire`.
+9. Open both App IDs, configure App Groups, and select `group.dev.haresh.keepshire`.
+10. In Xcode, select both the **Keepshire** and **KeepshireShare** targets → **Signing & Capabilities** → Team = your team → **Automatically manage signing**. Confirm the App Groups capability lists `group.dev.haresh.keepshire`. The first device build may ask you to allow certificates.
 
 **3. Create the app record (listing)**
 
@@ -92,7 +92,7 @@ These steps require your Apple ID and cannot be finished from this repo. They ar
 2. Platforms: iOS.
 3. Name: `Keepshire: Private Photo Vault`.
 4. Primary language: English (U.S.).
-5. Bundle ID: `com.haresh.keepshire` (the ID from step 2).
+5. Bundle ID: `dev.haresh.keepshire` (the ID from step 2).
 6. SKU: `keepshire` (internal; users never see it).
 7. User access: Full Access.
 

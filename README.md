@@ -16,8 +16,8 @@ The full technical inventory (for OS upgrades and regressions) is in [docs/FEATU
 | Devices | iPhone and iPad |
 | Language | Swift 5.0 (Xcode project setting) |
 | Dependencies | None (no SPM / CocoaPods) |
-| Bundle ID | `com.haresh.keepshire` |
-| Test bundle IDs | `com.haresh.keepshire.tests`, `com.haresh.keepshire.uitests` |
+| Bundle ID | `dev.haresh.keepshire` |
+| Test bundle IDs | `dev.haresh.keepshire.tests`, `dev.haresh.keepshire.uitests` |
 | Version | Marketing **1.0**; About reads the version and build from the bundle |
 
 The Xcode project is `Keepshire.xcodeproj`. This bundle ID is a new app: existing `com.haresh.FileVault` installs do not migrate Keychain or vault files. TestFlight is a fresh vault.

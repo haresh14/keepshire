@@ -175,7 +175,7 @@ Simulator: Features → Face ID → Enrolled / Matching Face / Non-matching Face
 - [ ] Face ID prompt says “unlock Keepshire”
 - [ ] Local-network prompt names Keepshire
 - [ ] iPad does not offer a second app window
-- [ ] Archive contains `PrivacyInfo.xcprivacy` with UserDefaults reason CA92.1 and no tracking declaration
+- [ ] Archive contains `PrivacyInfo.xcprivacy` with UserDefaults reason CA92.1, file timestamp reason C617.1, and no tracking declaration
 - [ ] Archive Info.plist has `ITSAppUsesNonExemptEncryption = YES`
 - [ ] Release run emits no verbose vault request, path, filename, or security-state diagnostics
 - [ ] Settings → About: Privacy Policy opens https://keepshire.haresh.dev/privacy and Support opens https://keepshire.haresh.dev/support

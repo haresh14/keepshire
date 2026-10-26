@@ -533,7 +533,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRIVACY_POLICY_URL = "https://keepshire.haresh.dev/privacy";
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORT_URL = "https://keepshire.haresh.dev/support";
@@ -563,7 +563,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRIVACY_POLICY_URL = "https://keepshire.haresh.dev/privacy";
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORT_URL = "https://keepshire.haresh.dev/support";
@@ -583,7 +583,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -602,7 +602,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -619,7 +619,7 @@
 				DEVELOPMENT_TEAM = AYL8H487NP;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -636,7 +636,7 @@
 				DEVELOPMENT_TEAM = AYL8H487NP;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -657,7 +657,7 @@
 				INFOPLIST_FILE = KeepshireShare/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire.share;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -680,7 +680,7 @@
 				INFOPLIST_FILE = KeepshireShare/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haresh.keepshire.share;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.haresh.keepshire.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;

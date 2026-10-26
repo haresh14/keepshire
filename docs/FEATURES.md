@@ -18,8 +18,8 @@
 | Last verified against source | 2026-09-17 |
 | App version (About UI) | Bundle marketing version + build number |
 | Marketing version (Xcode) | 1.0 |
-| Bundle ID | `com.haresh.keepshire` |
-| Test bundle IDs | `com.haresh.keepshire.tests`, `com.haresh.keepshire.uitests` |
+| Bundle ID | `dev.haresh.keepshire` |
+| Test bundle IDs | `dev.haresh.keepshire.tests`, `dev.haresh.keepshire.uitests` |
 | Home-screen name | Keepshire (`CFBundleDisplayName`) |
 | App Store name | Keepshire: Private Photo Vault |
 | App Store subtitle | Hide photos, videos & files |
@@ -39,7 +39,7 @@ There is **no cloud sync, widgets, or App Intents**. The Share Extension uses an
 
 Architecture: SwiftUI app (`KeepshireApp` → `ContentView` → `AuthenticationCoordinator` → `MainTabView`), MVVM view models, protocol-based `DependencyContainer`, Core Data for metadata, encrypted files on disk.
 
-The Xcode project is `Keepshire.xcodeproj`, the app source folder is `Keepshire`, and the Core Data model is `Keepshire`. `com.haresh.keepshire` is a different app from any previous `com.haresh.FileVault` install: Keychain and vault files do not migrate.
+The Xcode project is `Keepshire.xcodeproj`, the app source folder is `Keepshire`, and the Core Data model is `Keepshire`. `dev.haresh.keepshire` is a different app from any previous `com.haresh.FileVault` install: Keychain and vault files do not migrate.
 
 ### 1.1 App Store Connect listing
 
@@ -67,13 +67,13 @@ These values live in App Store Connect, not in the binary (except the home-scree
 | `NSFaceIDUsageDescription` | `Use Face ID to unlock Keepshire` | Face ID unlock |
 | `NSLocalNetworkUsageDescription` | `Keepshire uses the local network so you can upload files from a browser on the same Wi-Fi.` | LAN web upload |
 | `ITSAppUsesNonExemptEncryption` | `YES` | AES-GCM at rest and LAN TLS; App Store Connect export answers must match |
-| `PrivacyInfo.xcprivacy` | UserDefaults CA92.1; no tracking or collected data | App-only preferences; no account or analytics |
+| `PrivacyInfo.xcprivacy` | UserDefaults CA92.1, file timestamp C617.1; no tracking or collected data | App-only preferences; no account or analytics |
 | `UIBackgroundModes` | Not declared | In-flight LAN uploads use finite `beginBackgroundTask` time |
 | Scene manifest | Multiple scenes disabled | One SwiftUI `WindowGroup`; no second unlocked vault window |
 | Policy / support URLs | `https://keepshire.haresh.dev/privacy`, `https://keepshire.haresh.dev/support` | Settings → About |
 | Launch screen | Explicit empty `UILaunchScreen` dictionary | Required when linking with iOS 27 SDK |
 | Signing | Automatic | Team `AYL8H487NP` |
-| Entitlements | App Group only | `group.com.haresh.keepshire`; no iCloud, associated domains, or push entitlement |
+| Entitlements | App Group only | `group.dev.haresh.keepshire`; no iCloud, associated domains, or push entitlement |
 
 No Bonjour services are advertised, so `NSBonjourServices` is not declared.
 
@@ -108,7 +108,7 @@ No Bonjour services are advertised, so `NSBonjourServices` is not declared.
 | `Documents/Vault/` | `FileProtectionType.complete` | Yes — AES-GCM. Files under 16 MB are a single combined sealed box. Larger files use a `KSHC` chunked layout (1 MB plaintext chunks). Filenames on disk are the item UUID, not the display name. Imports above 2 GB are rejected. |
 | `Documents/Thumbnails/` | `FileProtectionType.complete` | Yes — AES-GCM combined sealed boxes named `{uuid}.thumb` (200×200 JPEG @ 0.7 before encryption) |
 | `Documents/Keepshire.sqlite` (+ WAL/SHM) | `completeUntilFirstUserAuthentication` | Display names, MIME types, and sizes are AES-GCM sealed JSON on each row (`sealedMetadata`). Search uses the decrypted copies in RAM after unlock. The store, `Documents/Vault/`, and `Documents/Thumbnails/` are excluded from iCloud/computer backup. |
-| Keychain items `com.haresh.keepshire` | `WhenUnlockedThisDeviceOnly` | System Keychain (credential + PBKDF2 salt/parameters) |
+| Keychain items `dev.haresh.keepshire` | `WhenUnlockedThisDeviceOnly` | System Keychain (credential + PBKDF2 salt/parameters) |
 | UserDefaults | Standard suite | Settings, auth type, lock timeout, trash flag, security logs, biometric enabled |
 
 **Encryption details**
@@ -171,7 +171,7 @@ Every item below is a **must-keep** behavior unless product explicitly drops it.
 | A2 | 4-digit passcode setup | Numeric only, exact length 4, confirm step, OTP-style fields + custom number pad. Explicitly described as weaker than 6-digit. | `PasscodeSetupView`, `OTPStylePasscodeView`, `CustomNumberPadView` | SwiftUI |
 | A3 | 6-digit passcode setup | Same as A2, length 6 | same | SwiftUI |
 | A4 | Password setup | Minimum **6** characters, confirmation, strength UI | `PasswordSetupView` | SwiftUI |
-| A5 | Store credential | Saved in Keychain, this-device-only, not iCloud Keychain sync | `KeychainManager.savePassword`, service `com.haresh.keepshire`, account `userPassword` | Security.framework |
+| A5 | Store credential | Saved in Keychain, this-device-only, not iCloud Keychain sync | `KeychainManager.savePassword`, service `dev.haresh.keepshire`, account `userPassword` | Security.framework |
 | A6 | Unlock with passcode/password | Custom UI, not system passcode sheet | `PasscodeView` | SwiftUI |
 | A7 | Enable Face ID / Touch ID | Settings toggle; disabled if hardware/enrollment unavailable. `LABiometryType` only maps `.faceID` and `.touchID`; any other type (including Optic ID if present) is treated as `.none` | `BiometricAuthManager`, UserDefaults `biometricEnabled` | LocalAuthentication (`LAContext`) |
 | A8 | Biometric unlock | Prompt on foreground if enabled; cancel title **"Use Password"**; `localizedFallbackTitle = ""` (no Enter Password / device-passcode fallback on the biometric policy). Success always sets **real** login | `AuthenticationCoordinator` | `LAPolicy.deviceOwnerAuthenticationWithBiometrics` |
@@ -330,7 +330,7 @@ Playback decrypts to a temporary file; original vault file stays encrypted.
 | W6b | Browser drag and drop | Dragging files or folders anywhere over the explorer shows a “Drop to upload” overlay naming the destination folder. Dropping opens the upload dialog and starts the upload straight away; dropped directories keep their structure | `WebServerHTMLGenerator` |
 | W7 | Block fake login | UI disabled; HTTP 403 | — |
 | W8 | Background keep-alive | `UIBackgroundTask` named `WebServerUpload` while uploads are in flight, so a transfer that is already running survives a short trip away from the app. The server needs the app open; it does not accept new uploads once iOS suspends the app | UIKit background task |
-| W9 | Background URLSession | Session id `com.haresh.keepshire.background-upload`; POST `/upload`; trusts only this session’s TLS certificate | `URLSessionConfiguration.background` |
+| W9 | Background URLSession | Session id `dev.haresh.keepshire.background-upload`; POST `/upload`; trusts only this session’s TLS certificate | `URLSessionConfiguration.background` |
 | W10 | Large uploads | `POST /upload` with Content-Length **> 100MB** (`100 * 1024 * 1024`) switches to `handleLargeFileUpload`. Browser can also `POST /upload/stream` | custom HTTP |
 | W11 | Gallery web-upload sheet | Same server controls as the tab, presented from Gallery Add Content | `WebUploadView` |
 | W12 | Device locked | While the device is locked, vault files are unreadable and unwritable, so every route that touches them answers **503** with “iPhone is locked. Unlock it to continue, then try again.” Any open export session ends. Routes resume as soon as the device unlocks | `protectedDataWillBecomeUnavailableNotification` |
@@ -394,7 +394,7 @@ Fake login: **About only**.
 | X6 | Accessibility | Auth choices, secret passcode entry count, number pad, vault/folder rows, preview actions, trash actions, web upload, and player controls have VoiceOver labels. Number-pad keys and passcode fields scale with Dynamic Type and retain 44-point targets. |
 | X7 | Dynamic Type | SwiftUI text styles plus scaled passcode fields and keypad controls; auth setup remains usable at accessibility sizes. |
 | X8 | iPad | Regular-width iPad uses native adaptive tabs and split layouts: a nested Folder outline, category/sidebar navigation, Gallery and Trash grid/detail previews, sectioned Settings, and embedded file/media previews. Compact iPad windows retain the iPhone stacks. Web Upload uses a centered readable column. Multiple scenes remain disabled. |
-| X9 | Share Extension import | The extension copies supported files to `group.com.haresh.keepshire/Inbox/<session>/` without vault or Keychain access. The app drains the inbox on a real unlock, and also on foreground when the vault is still unlocked inside the auto-lock window; fake-vault unlocks never drain it. |
+| X9 | Share Extension import | The extension copies supported files to `group.dev.haresh.keepshire/Inbox/<session>/` without vault or Keychain access. The app drains the inbox on a real unlock, and also on foreground when the vault is still unlocked inside the auto-lock window; fake-vault unlocks never drain it. |
 | X10 | Gallery thumbnail cache | Gallery fetches all non-trashed items and selects photos/videos in memory, because `fileType` lives in sealed metadata and cannot be filtered by a store predicate. Thumbnails decrypt lazily per visible cell; the decrypted data is memory-cached and purged whenever the vault locks or the key changes. |
 | X11 | Diagnostics | MetricKit crash/hang delivery only. The app stores the last delivery date and does not record vault analytics, file names, paths, or content. |
 
@@ -434,7 +434,7 @@ Store name: `Keepshire`. Class codegen: manual (`Folder+CoreData*`, `VaultItem+C
 ## 6. Constants (do not change accidentally in an OS upgrade)
 
 ```
-Keychain service:                 com.haresh.keepshire
+Keychain service:                 dev.haresh.keepshire
 Keychain accessibility:           kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 Encryption:                       AES-GCM; key = PBKDF2-HMAC-SHA256 (210k, 16-byte salt)
 Keychain derivation account:      vaultKeyDerivation
@@ -447,7 +447,7 @@ Passcode length:                  exactly 4 or 6 digits
 Web server port:                  8080 (HTTPS, TLS 1.2+)
 PHPicker selection limit:         50
 Thumbnail size / JPEG quality:    200×200 / 0.7, AES-GCM as `{uuid}.thumb`
-Background URLSession id:         com.haresh.keepshire.background-upload
+Background URLSession id:         dev.haresh.keepshire.background-upload
 Streaming upload threshold:       100 MB
 Security log cap:                 100 entries
 ```
@@ -532,7 +532,7 @@ Use this for iOS 27, 28, 29, or any Xcode bump. Check every box against a **devi
 
 **Data integrity**
 
-- [ ] Existing vault from a previous OS **on the same bundle ID** `com.haresh.keepshire` still unlocks with the same credential (PBKDF2 salt in Keychain, or SHA-256 ciphertext rewritten on first unlock)
+- [ ] Existing vault from a previous OS **on the same bundle ID** `dev.haresh.keepshire` still unlocks with the same credential (PBKDF2 salt in Keychain, or SHA-256 ciphertext rewritten on first unlock)
 - [ ] A leftover `com.haresh.FileVault` install is a separate app and does not share this vault
 - [ ] Thumbnails still load; Core Data store migrates without loss
 - [ ] Keychain items survive the upgrade (same bundle ID), including `vaultKeyDerivation`

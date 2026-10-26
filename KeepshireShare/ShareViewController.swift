@@ -122,7 +122,7 @@ final class ShareViewController: UIViewController {
 
     private func stageInputItems() {
         guard let groupRoot = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.haresh.keepshire"
+            forSecurityApplicationGroupIdentifier: "group.dev.haresh.keepshire"
         ) else {
             finish(error: NSError(
                 domain: "KeepshireShare",

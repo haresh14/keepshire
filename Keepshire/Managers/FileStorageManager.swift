@@ -67,7 +67,7 @@ class FileStorageManager: FileStorageManaging {
         self.coreDataManager = coreDataManager
         self.keyDerivationStore = keyDerivationStore
         self.sharedInboxURL = sharedInboxURL ?? FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.haresh.keepshire")?
+            .containerURL(forSecurityApplicationGroupIdentifier: "group.dev.haresh.keepshire")?
             .appendingPathComponent("Inbox", isDirectory: true)
         
         // Create vault directory

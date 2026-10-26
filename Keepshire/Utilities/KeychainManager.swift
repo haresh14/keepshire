@@ -53,7 +53,7 @@ class KeychainManager: KeychainManaging {
     private let authTypeKey = "authenticationType"
     
     private init() {
-        service = "com.haresh.keepshire"
+        service = "dev.haresh.keepshire"
         defaults = .standard
     }
 
