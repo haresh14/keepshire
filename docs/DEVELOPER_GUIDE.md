@@ -116,7 +116,7 @@ If you forget your vault passcode or password, the files cannot be recovered.
 ```
 
 - Keywords: `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock,hidden,pdf,pin`
-- Screenshots: iPhone 6.9" and iPad 13" (both required because the app runs on iPad). `release/screenshots.sh` captures them with generated sample photos; see [release.md](../release.md).
+- Screenshots: iPhone with Dynamic Island (medium display, 1206 × 2622) and iPad 13" (2064 × 2752) are required because the app runs on iPhone and iPad; the large iPhone slot (1320 × 2868) is optional. `release/screenshots.sh` captures them with generated sample photos; see [release.md](../release.md).
 - Review notes (paste):
 
 ```

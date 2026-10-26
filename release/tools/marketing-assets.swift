@@ -3,7 +3,8 @@
 // Usage: swift release/tools/marketing-assets.swift <repo root>
 //
 // Writes, all opaque PNG (App Store rejects alpha):
-//   release/assets/screenshots/iphone-6.9/*.png   1320 x 2868
+//   release/assets/screenshots/iphone-6.3/*.png   1206 x 2622 (required "Dynamic Island, medium display" slot)
+//   release/assets/screenshots/iphone-6.9/*.png   1320 x 2868 ("Dynamic Island, large display" slot)
 //   release/assets/screenshots/ipad-13/*.png      2064 x 2752
 //   release/assets/product-page-header.png        3840 x 1646 (21:9)
 //   release/assets/search-results.png             3840 x 2560 (3:2)
@@ -136,7 +137,10 @@ func captioned(_ caption: Caption, width: Int, height: Int, screenWidthRatio: CG
     }
 }
 
+// App Store Connect only accepts exact sizes per display slot; the medium (6.3")
+// slot is the required one, the large (6.9") slot is optional.
 for (index, caption) in iphoneCaptions.enumerated() {
+    captioned(caption, width: 1206, height: 2622, screenWidthRatio: 0.80, cornerRatio: 0.12, folder: "iphone-6.3", index: index)
     captioned(caption, width: 1320, height: 2868, screenWidthRatio: 0.80, cornerRatio: 0.12, folder: "iphone-6.9", index: index)
 }
 for (index, caption) in ipadCaptions.enumerated() {

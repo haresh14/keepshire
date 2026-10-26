@@ -114,12 +114,15 @@ If the name is taken, App Store Connect rejects it at this step. Pick a variant 
 
 ## 7. Screenshots
 
-App Store Connect requires screenshots for the largest iPhone and the largest iPad. Smaller sizes are scaled from these.
+App Store Connect accepts only exact pixel sizes per display slot, and rejects other sizes with "File dimensions are invalid". The required slots are **iPhone with Dynamic Island (medium display)** and **iPad 13" display**. The large iPhone slot is optional; other slots are scaled from these.
 
-| Display | Simulator | Pixel size (portrait) |
-|---|---|---|
-| iPhone 6.9" | iPhone 18 Pro Max | 1320 × 2868 |
-| iPad 13" | iPad Pro 13-inch (M5) | 2064 × 2752 |
+| App Store Connect slot | Required | Pixel size (portrait) | Files |
+|---|---|---|---|
+| iPhone with Dynamic Island (medium display) | Yes | 1206 × 2622 (or 1179 × 2556) | `release/assets/screenshots/iphone-6.3/` |
+| iPhone with Dynamic Island (large display) | No | 1320 × 2868 (or 1290 × 2796, 1260 × 2736) | `release/assets/screenshots/iphone-6.9/` |
+| iPad 13" display | Yes, the app runs on iPad | 2064 × 2752 (or 2048 × 2732) | `release/assets/screenshots/ipad-13/` |
+
+The raw captures come from an iPhone 18 Pro Max (1320 × 2868) and an iPad Pro 13-inch (M5) simulator. `release/tools/marketing-assets.swift` renders the captioned iPhone set natively at both iPhone sizes.
 
 Capture them:
 
@@ -147,11 +150,12 @@ Built to Apple's [App Store asset best practices](https://developer.apple.com/ap
 
 | Asset | File(s) | Spec |
 |---|---|---|
-| Captioned screenshots, iPhone 6.9" | `screenshots/iphone-6.9/01…06.png` | 1320 × 2868 PNG, no alpha |
+| Captioned screenshots, iPhone medium (required) | `screenshots/iphone-6.3/01…06.png` | 1206 × 2622 PNG, no alpha |
+| Captioned screenshots, iPhone large | `screenshots/iphone-6.9/01…06.png` | 1320 × 2868 PNG, no alpha |
 | Captioned screenshots, iPad 13" | `screenshots/ipad-13/01…05.png` | 2064 × 2752 PNG, no alpha |
 | Product page header | `product-page-header.png` | 21:9, 3840 × 1646 PNG |
 | Search results | `search-results.png` | 3:2, 3840 × 2560 PNG |
-| App preview, iPhone 6.9" | `app-preview/iphone-6.9.mov` | 886 × 1920, 30 fps H.264 High@4.0, 11 Mbps, silent 256 kbps AAC, 15–30 s |
+| App preview, iPhone (any iPhone slot) | `app-preview/iphone-6.9.mov` | 886 × 1920, 30 fps H.264 High@4.0, 11 Mbps, silent 256 kbps AAC, 15–30 s |
 | App preview, iPad 13" | `app-preview/ipad-13.mov` | 1200 × 1600, same encoding |
 
 How they follow the guidelines:
@@ -193,7 +197,7 @@ The first refreshes the raw captures. The second rebuilds the captioned screensh
 
 Upload:
 
-- **Screenshots and previews:** App Store Connect → the version → **Previews and Screenshots**. Put `app-preview/iphone-6.9.mov` first, then the `iphone-6.9` screenshots in order, under **iPhone 6.9" Display**. Do the same with the iPad files under **iPad 13" Display**. Previews can take up to 24 hours to process.
+- **Screenshots and previews:** App Store Connect → the version → **Previews and Screenshots**. Under **iPhone with Dynamic Island (medium display)**, put `app-preview/iphone-6.9.mov` first, then the `iphone-6.3` screenshots in order. Optionally do the same with the `iphone-6.9` screenshots under the **large display** slot. Put `app-preview/ipad-13.mov` and the `ipad-13` screenshots under **iPad 13" display**. Previews can take up to 24 hours to process.
 - **Product page header and search results:** App Store Connect → the app → **Asset Library** (or with a new version). Check them in the product page preview tool before publishing.
 
 Not included:
