@@ -41,7 +41,7 @@ Notification authorization is requested when the user starts Web Upload. Do not 
 
 ### Export compliance
 
-`ITSAppUsesNonExemptEncryption` is `YES`. App Store Connect answers and legal advice must agree with that declaration. App Review notes:
+`Keepshire/Info.plist` does not set `ITSAppUsesNonExemptEncryption`. The app does use encryption (AES-GCM at rest, not only HTTPS), and that is declared in App Store Connect: each uploaded build shows **Missing Compliance** until the encryption questions are answered there. Setting the key to `YES` without an approved documentation key makes App Store Connect reject the upload ("Invalid Export Compliance Code"). Once Apple issues a key, add `ITSAppUsesNonExemptEncryption = YES` and `ITSEncryptionExportComplianceCode` together. App Review notes:
 
 > The app encrypts user-selected files and metadata on device with AES-GCM. The encryption key is derived from the user's vault credential with PBKDF2-HMAC-SHA256; Keychain material is ThisDeviceOnly. The optional local-network transfer server uses HTTPS with a new self-signed ECDSA certificate per server session. The app has no account or cloud sync, and vault files are excluded from backup.
 
@@ -134,14 +134,14 @@ App Store Connect → App Privacy → **Get Started**.
 
 **5. Export compliance (encryption)**
 
-The Info.plist key `ITSAppUsesNonExemptEncryption` is **YES** because Keepshire uses AES-GCM at rest (not “HTTPS only”). Answers in Connect must not contradict that.
+Keepshire uses AES-GCM at rest (not “HTTPS only”), so it uses encryption. The Info.plist does not declare it; the answers are given in App Store Connect for each build until Apple issues a documentation key (see Export compliance above).
 
 Typical path (wording varies; read the screen):
 
 1. First TestFlight / App Store upload, or **App Store Connect** → the app → **Distribution** / compliance questions.
 2. “Does your app use encryption?” → **Yes**.
-3. Questions about exemption (HTTPS only, authentication only, etc.) → **No, not exempt** for this product. Custom file encryption is why the plist is YES.
-4. If Apple then asks for an ERN or annual self-classification, follow the link they show. That paperwork is yours (or a lawyer’s). Do not flip the plist to `NO` to skip it.
+3. Questions about exemption (HTTPS only, authentication only, etc.) → **No, not exempt** for this product, because of the custom file encryption.
+4. If Apple then asks for an ERN or annual self-classification, follow the link they show. That paperwork is yours (or a lawyer’s). Do not add `ITSAppUsesNonExemptEncryption = NO` to skip it.
 
 A lawyer who does software export can confirm this. This repo does not replace that.
 

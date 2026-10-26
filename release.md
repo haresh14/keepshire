@@ -30,7 +30,7 @@ Steps marked **(one time)** are only needed for the first release.
 | Marketing URL | https://keepshire.haresh.dev |
 | Support email | hello@haresh.dev |
 | Copyright | `2026 Haresh Godhani` |
-| Export compliance | `ITSAppUsesNonExemptEncryption = YES` (see [§11](#11-export-compliance)) |
+| Export compliance | Uses encryption; declared in App Store Connect, not in Info.plist (see [§11](#11-export-compliance)) |
 | App Privacy label | Data Not Collected (see [§9](#9-app-privacy-nutrition-label)) |
 
 The privacy, support, and marketing pages are deployed from [`web/`](web/) on Vercel and return HTTP 200.
@@ -61,7 +61,7 @@ These are already set; verify them if you change project settings.
 
 - **Signing:** Automatic, team `AYL8H487NP`, for both `Keepshire` and `KeepshireShare`. The app and the share extension must share the same version and build; `release.sh` sets both.
 - **Entitlements:** App Groups only (`group.dev.haresh.keepshire`) on both targets.
-- **Info.plist:** `NSFaceIDUsageDescription`, `NSLocalNetworkUsageDescription`, `ITSAppUsesNonExemptEncryption = YES`, explicit `UILaunchScreen`, all four iPad orientations (required for iPad multitasking).
+- **Info.plist:** `NSFaceIDUsageDescription`, `NSLocalNetworkUsageDescription`, explicit `UILaunchScreen` (no `ITSAppUsesNonExemptEncryption`; see [§11](#11-export-compliance)), all four iPad orientations (required for iPad multitasking).
 - **Privacy manifest** (`Keepshire/PrivacyInfo.xcprivacy`): UserDefaults `CA92.1`, file timestamp `C617.1` (`attributesOfItem` for the Settings storage total), no tracking, no collected data. If you add a required-reason API (disk space, system boot time, active keyboards, file timestamps outside the container), add it here or App Store Connect emails an `ITMS-91053` warning.
 - **App icon:** 1024×1024 PNG with no alpha channel, plus dark and tinted variants.
 - **Debug-only code:** the Settings developer section and the `--ui-testing` launch hooks are compiled only in Debug, so Release builds cannot reset the vault from launch arguments.
@@ -262,9 +262,9 @@ Expected rating: **4+**.
 
 ## 11. Export compliance
 
-`ITSAppUsesNonExemptEncryption` is **YES** in `Keepshire/Info.plist`. That is a deliberate project decision ([docs/DEVELOPER_GUIDE.md → Export compliance](docs/DEVELOPER_GUIDE.md#export-compliance)): Keepshire encrypts files at rest with AES-GCM, not only HTTPS. Do not change it to skip the questions.
+Keepshire uses encryption: it encrypts files at rest with AES-GCM, not only HTTPS ([docs/DEVELOPER_GUIDE.md → Export compliance](docs/DEVELOPER_GUIDE.md#export-compliance)). `Keepshire/Info.plist` does **not** set `ITSAppUsesNonExemptEncryption`. With the key set to `YES` and no approved documentation key, App Store Connect rejects the upload with "Invalid Export Compliance Code". Do not set it to `NO` to skip the questions.
 
-Because the key is YES, App Store Connect asks the encryption questions when you first attach a build (TestFlight or the App Store version). The wording changes over time; answer to match the facts:
+Without the key, each uploaded build shows **Missing Compliance** in TestFlight. Click it (or attach the build to the version) and answer the encryption questions. The wording changes over time; answer to match the facts:
 
 | Fact | Answer |
 |---|---|
@@ -275,7 +275,7 @@ Because the key is YES, App Store Connect asks the encryption questions when you
 
 If Connect then asks for documentation, upload what it requests (for U.S. mass-market products this is typically a self-classification report, filed with BIS by 1 February each year). If you distribute in **France**, Connect may ask for a French encryption declaration; either provide it or exclude France in Pricing and Availability.
 
-After Apple approves the documentation, it gives you a key. Add `ITSEncryptionExportComplianceCode` with that value to `Keepshire/Info.plist` so later builds skip the questions.
+If Apple approves documentation and gives you a key, add both `ITSAppUsesNonExemptEncryption = YES` and `ITSEncryptionExportComplianceCode` (with that value) to `Keepshire/Info.plist`, so later builds skip the questions.
 
 This guide is not legal advice; confirm with an export-compliance lawyer if unsure.
 
@@ -358,7 +358,8 @@ To reply to a rejection, use **Resolution Center** in App Store Connect. Fix cod
 | `CFBundleVersion of the app extension does not match the parent app` | Archive with `release.sh`, or set the same version/build on both targets in Xcode. |
 | `ITMS-91053: Missing API declaration` | Add the named required-reason API to `PrivacyInfo.xcprivacy`. |
 | `ITMS-90474` / iPad multitasking orientation error | Keep all four orientations in `UISupportedInterfaceOrientations~ipad`. |
-| Build shows "Missing Compliance" in TestFlight | Answer the export questions on the build ([§11](#11-export-compliance)). |
+| Build shows "Missing Compliance" in TestFlight | Expected; answer the export questions on the build ([§11](#11-export-compliance)). |
+| Upload fails with "Invalid Export Compliance Code" | Info.plist declares `ITSAppUsesNonExemptEncryption = YES` without a matching `ITSEncryptionExportComplianceCode`. Remove the key, or add the code Apple issued ([§11](#11-export-compliance)). |
 | `screenshots.sh` says no simulator found | Create the device in Xcode → Window → Devices and Simulators, or pass `IPHONE_SIM` / `IPAD_SIM`. |
 | Screenshot test fails with "No staged photos were imported" | Run the whole script (it erases the simulator and stages the sample photos first) instead of running the test alone. |
 | Screenshots come out black | Screenshot Protection was on. The test turns it off first; for manual captures, turn it off in Settings → Advanced Security and back on afterwards. |

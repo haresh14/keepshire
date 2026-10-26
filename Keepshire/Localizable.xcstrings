@@ -4,6 +4,9 @@
     "" : {
 
     },
+    "  If you forget your passcode or password, Keepshire cannot recover your files." : {
+
+    },
     "(%@)" : {
 
     },
@@ -35,6 +38,16 @@
     },
     "%lld" : {
 
+    },
+    "%lld %@ · %@ · Encrypted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ · %3$@ · Encrypted"
+          }
+        }
+      }
     },
     "%lld failed" : {
 
@@ -99,10 +112,10 @@
     "●" : {
 
     },
-    "About" : {
+    "1 item" : {
 
     },
-    "Access your secure vault" : {
+    "About" : {
 
     },
     "Add Content" : {
@@ -153,9 +166,6 @@
     "Ascending" : {
 
     },
-    "Auto-Lock" : {
-
-    },
     "Back" : {
 
     },
@@ -186,19 +196,10 @@
     "Change Authentication" : {
 
     },
-    "Change Fake Password" : {
-
-    },
     "Checking Authentication..." : {
 
     },
-    "Choose a category from the sidebar." : {
-
-    },
-    "Choose a file to preview it here." : {
-
-    },
-    "Choose New Authentication" : {
+    "Choose how you'll unlock Keepshire. You can change it later in Settings." : {
 
     },
     "Close" : {
@@ -237,38 +238,13 @@
     "Create" : {
 
     },
-    "Create a %lld-digit %@passcode%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Create a %1$lld-digit %2$@passcode%3$@"
-          }
-        }
-      }
-    },
     "Create a decoy password that shows an empty vault when used" : {
-
-    },
-    "Create a fake password that shows an empty vault when used" : {
-
-    },
-    "Create a secure passcode to protect your vault" : {
-
-    },
-    "Create a secure password to protect your vault" : {
-
-    },
-    "Create a strong password to protect your vault" : {
 
     },
     "Create Folder" : {
 
     },
     "Created: %@" : {
-
-    },
-    "Current Method" : {
 
     },
     "Current Password" : {
@@ -307,22 +283,16 @@
     "Done" : {
 
     },
-    "Downloads stay off until you allow them. Each file gets a single-use link, and the window closes when it expires or you leave the app." : {
+    "Downloads" : {
 
     },
-    "Downloads:" : {
+    "Downloads stay off until you allow them. Each file gets a single-use link, and the window closes when it expires or you leave the app." : {
 
     },
     "Empty Trash" : {
 
     },
     "Empty Trash & Disable" : {
-
-    },
-    "Enable Biometric Authentication" : {
-
-    },
-    "Enable Trash" : {
 
     },
     "Enhanced Protection" : {
@@ -340,16 +310,7 @@
     "Enter a new name for the folder" : {
 
     },
-    "Enter Passcode" : {
-
-    },
     "Enter Password" : {
-
-    },
-    "Enter your %lld-digit passcode" : {
-
-    },
-    "Enter your current %@ to continue" : {
 
     },
     "Error loading image" : {
@@ -388,10 +349,10 @@
     "Files of this type will appear here when you add them to your vault" : {
 
     },
-    "Flip to Lock" : {
+    "Folder" : {
 
     },
-    "Folder" : {
+    "Folder actions" : {
 
     },
     "Folder Name" : {
@@ -421,16 +382,13 @@
     "Home" : {
 
     },
-    "How to Upload Files:" : {
+    "How to Upload Files" : {
 
     },
     "If you forget this passcode, Keepshire cannot recover your files." : {
 
     },
     "If you forget this password, Keepshire cannot recover your files." : {
-
-    },
-    "If you forget your passcode or password, Keepshire cannot recover your files." : {
 
     },
     "Instructions" : {
@@ -506,7 +464,7 @@
     "Order" : {
 
     },
-    "Pairing Code:" : {
+    "Pairing Code" : {
 
     },
     "Passcode" : {
@@ -527,9 +485,6 @@
     "Permanently delete %lld selected items" : {
 
     },
-    "Permanently delete items you no longer need" : {
-
-    },
     "Play" : {
 
     },
@@ -545,7 +500,7 @@
     "Preview Not Available" : {
 
     },
-    "Privacy Policy" : {
+    "Private. Encrypted. Yours." : {
 
     },
     "Processing:" : {
@@ -557,15 +512,8 @@
     "Re-encrypting your files with the new authentication method" : {
 
     },
-    "Re-enter your %lld-digit %@passcode" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Re-enter your %1$lld-digit %2$@passcode"
-          }
-        }
-      }
+    "Recommended" : {
+
     },
     "Remove Fake Password" : {
 
@@ -612,12 +560,6 @@
     "Scan this code with your phone's camera to quickly access the upload page" : {
 
     },
-    "Screen Recording Protection" : {
-
-    },
-    "Screenshot Protection" : {
-
-    },
     "Search %@" : {
 
     },
@@ -625,6 +567,9 @@
 
     },
     "Search this folder" : {
+
+    },
+    "Secure your vault" : {
 
     },
     "Security" : {
@@ -639,28 +584,16 @@
     "Select" : {
 
     },
-    "Select a Category" : {
-
-    },
-    "Select a File" : {
-
-    },
     "Select All" : {
-
-    },
-    "Select how you'd like to secure your vault" : {
 
     },
     "Select Items" : {
 
     },
-    "Select items and restore to their original location" : {
-
-    },
-    "Select your new authentication method" : {
-
-    },
     "Selected" : {
+
+    },
+    "Server address" : {
 
     },
     "Server disabled" : {
@@ -676,9 +609,6 @@
 
     },
     "Server URL" : {
-
-    },
-    "Server URL:" : {
 
     },
     "Set" : {
@@ -699,16 +629,7 @@
     "Set Password" : {
 
     },
-    "Set Your Passcode" : {
-
-    },
-    "Set Your Password" : {
-
-    },
     "Settings" : {
-
-    },
-    "Shake to Lock" : {
 
     },
     "Share" : {
@@ -735,13 +656,13 @@
     "Start Server" : {
 
     },
+    "Start the server to upload from a browser" : {
+
+    },
     "Stop Downloads" : {
 
     },
     "Stop Server" : {
-
-    },
-    "Support" : {
 
     },
     "Supported File Types" : {
@@ -771,16 +692,7 @@
     "This will delete all files and folders in your vault but keep your passcode and settings." : {
 
     },
-    "Total Files" : {
-
-    },
-    "Total Size" : {
-
-    },
     "Trash" : {
-
-    },
-    "Trash is Empty" : {
 
     },
     "Troubleshooting" : {
@@ -801,9 +713,6 @@
     "Updating Vault" : {
 
     },
-    "Upload files from any device on your network" : {
-
-    },
     "Use %@" : {
 
     },
@@ -813,22 +722,13 @@
     "Vault passcode or password" : {
 
     },
-    "Verify Current Authentication" : {
-
-    },
-    "Version" : {
-
-    },
-    "View Trash" : {
+    "Waiting for a browser to connect" : {
 
     },
     "Web server is not available in this mode" : {
 
     },
     "Web Upload" : {
-
-    },
-    "When you delete files with trash enabled, they'll appear here as a gallery. You can restore them or permanently delete them." : {
 
     },
     "You are changing to the same authentication type" : {

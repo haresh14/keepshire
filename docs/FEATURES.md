@@ -66,7 +66,7 @@ These values live in App Store Connect, not in the binary (except the home-scree
 | `CFBundleDisplayName` | Keepshire | Home-screen and SpringBoard name |
 | `NSFaceIDUsageDescription` | `Use Face ID to unlock Keepshire` | Face ID unlock |
 | `NSLocalNetworkUsageDescription` | `Keepshire uses the local network so you can upload files from a browser on the same Wi-Fi.` | LAN web upload |
-| `ITSAppUsesNonExemptEncryption` | `YES` | AES-GCM at rest and LAN TLS; App Store Connect export answers must match |
+| `ITSAppUsesNonExemptEncryption` | Not set | The app uses AES-GCM at rest and LAN TLS; encryption is declared in App Store Connect per build until Apple issues a documentation key, which is then added with `ITSEncryptionExportComplianceCode` |
 | `PrivacyInfo.xcprivacy` | UserDefaults CA92.1, file timestamp C617.1; no tracking or collected data | App-only preferences; no account or analytics |
 | `UIBackgroundModes` | Not declared | In-flight LAN uploads use finite `beginBackgroundTask` time |
 | Scene manifest | Multiple scenes disabled | One SwiftUI `WindowGroup`; no second unlocked vault window |
