@@ -3,11 +3,12 @@ import SwiftUI
 struct EmptyStateView: View {
     private enum Layout {
         static let actionsSpacing: CGFloat = 12
-        static let actionsTopPadding: CGFloat = 8
-        static let additionalMessageTopPadding: CGFloat = 5
-        static let backgroundCornerRadius: CGFloat = 12
-        static let hiddenScale: CGFloat = 0.8
-        static let hiddenOffset: CGFloat = 20
+        static let additionalMessageTopPadding: CGFloat = 2
+        static let iconSize: CGFloat = 72
+        static let maximumWidth: CGFloat = 420
+        static let actionsWidth: CGFloat = 280
+        static let hiddenScale: CGFloat = 0.96
+        static let hiddenOffset: CGFloat = 12
     }
 
     let configuration: EmptyStateConfiguration
@@ -17,41 +18,41 @@ struct EmptyStateView: View {
         self.configuration = configuration
     }
 
+    /// Every empty state uses the same hero as the auth screens and Trash: a
+    /// gradient icon tile, a rounded title, and a secondary subtitle, centred.
     var body: some View {
-        VStack(spacing: configuration.spacing) {
-            icon
-
-            Text(configuration.title)
-                .font(configuration.style.titleFont)
-                .fontWeight(.semibold)
-                .fontDesign(.rounded)
-                .foregroundColor(configuration.style.titleColor)
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                icon
+                VStack(spacing: 8) {
+                    Text(configuration.title)
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .foregroundColor(.primary)
+                    if let subtitle = configuration.subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    if let additionalMessage = configuration.additionalMessage {
+                        Text(additionalMessage)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .padding(.top, Layout.additionalMessageTopPadding)
+                    }
+                }
                 .multilineTextAlignment(.center)
-
-            if let subtitle = configuration.subtitle {
-                Text(subtitle)
-                    .font(configuration.style.subtitleFont)
-                    .foregroundColor(configuration.style.subtitleColor)
-                    .multilineTextAlignment(.center)
-            }
-
-            if let additionalMessage = configuration.additionalMessage {
-                Text(additionalMessage)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, Layout.additionalMessageTopPadding)
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             actions
         }
-        .frame(maxWidth: configuration.maxWidth)
-        .padding(configuration.contentPadding)
-        .background(configuration.style.backgroundColor)
-        .cornerRadius(configuration.style.backgroundColor == nil ? 0 : Layout.backgroundCornerRadius)
+        .frame(maxWidth: min(configuration.maxWidth ?? Layout.maximumWidth, Layout.maximumWidth))
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
         .opacity(isVisible ? 1 : 0)
         .scaleEffect(isVisible ? 1 : Layout.hiddenScale)
         .offset(y: isVisible ? 0 : Layout.hiddenOffset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear(perform: reveal)
     }
 
@@ -60,8 +61,8 @@ struct EmptyStateView: View {
         if let customIcon = configuration.customIcon {
             customIcon
         } else if let iconName = configuration.iconName {
-            KeepshireIconTile(systemName: iconName, size: min(configuration.style.iconSize, 84), filled: true)
-                .shadow(color: KeepshireTheme.glowTeal.opacity(0.3), radius: 14, y: 6)
+            KeepshireIconTile(systemName: iconName, size: Layout.iconSize, filled: true)
+                .shadow(color: KeepshireTheme.glowTeal.opacity(0.35), radius: 16, y: 8)
         }
     }
 
@@ -76,7 +77,7 @@ struct EmptyStateView: View {
                     EmptyStateActionButton(action: secondaryAction)
                 }
             }
-            .padding(.top, Layout.actionsTopPadding)
+            .frame(maxWidth: Layout.actionsWidth)
         }
     }
 

@@ -227,13 +227,13 @@ Changing tabs posts `TabDidChange`, which **clears multi-select** in list/grid s
 
 | ID | Feature | Behavior | APIs |
 |----|---------|----------|------|
-| F1 | Nested folders | `parent` / `subfolders`; breadcrumbs; `NavigationStack` path | Core Data |
+| F1 | Nested folders | `parent` / `subfolders`; breadcrumbs as the first row of the folder list (same background as the rows); `NavigationStack` path | Core Data |
 | F2 | Create folder | Alert / empty state / Add Content sheet | Core Data |
 | F3 | Rename folder | Context menu (also Select / Move / Delete on selectable rows) | Core Data |
 | F4 | Delete folder | If trash on: nested **files** go to trash at **root** (`folder = nil`); folder records are deleted. If trash off: permanent cascade (`deleteFolderCompletely`) | Core Data + FileStorage |
 | F5 | Move folder | Folder picker; cannot move into self or descendants | `CoreDataManager.moveFolder` |
 | F6 | Sort folders and files | User Default, Name, Date, Size, Duration, Kind, Favorites + ascending/descending toggle. Duration treats non-videos as 0 seconds, then orders equal durations by file size; folders use item count | `FolderSortOption` |
-| F7 | Empty state | Create folder / add files CTAs | `EmptyStateView` |
+| F7 | Empty state | Create folder / add files CTAs. Every empty state (folders, gallery, categories, search, trash) uses the same centred hero: gradient icon tile, rounded title, subtitle, and standard primary/secondary buttons | `EmptyStateView`, `KeepshireHero` |
 | F8 | Swipe to delete | Trailing swipe on folder and file rows; full-swipe allowed only when trash is **off** | SwiftUI `swipeActions` |
 | F9 | Folder multi-select | Select All, Move, Delete on folders in selection mode | `FolderViewModel` |
 
@@ -391,7 +391,7 @@ Fake login: **About only**.
 | X2 | Sheets | SwiftUI `.sheet` / `.fullScreenCover` for pickers, add content, web upload, trash, and auth change |
 | X3 | Dark mode | System grouped colours plus `KeepshireTheme`, which supplies light/dark brand colours from the asset catalog (`AccentColor`, `BrandGreen`, `LaunchBackground`). No per-user theme setting |
 | X3a | Brand palette | Colours are sampled from the app icon. Teal accent for actions, selection, folders, and progress; green reserved for success/protected states; `actionGradient` (a darker cut of the icon sweep) fills primary buttons and selected tiles so white text stays readable. File-type and category colours stay distinct on purpose |
-| X3b | Visual style | Shared components in `KeepshireStyle.swift`: `KeepshireBackground` (grouped background with a soft brand tint at the top) behind every screen, `keepshireCard()` raised cards, `KeepshirePrimaryButtonStyle` / `KeepshireSecondaryButtonStyle`, `KeepshireIconTile` (symbol in a tinted or gradient rounded square, used for rows, categories, settings, and empty states), `KeepshireHero` (logo or symbol, rounded title, subtitle) on auth and Web Upload, `keepshireFieldStyle()` for password fields, and `KeepshirePlaceholder` for the empty Categories column before a category is chosen. `KeepshireAppearance` sets rounded navigation titles app-wide. Gallery tiles are rounded with gaps; the media viewer stays black and full screen |
+| X3b | Visual style | Shared components in `KeepshireStyle.swift`: `KeepshireBackground` (grouped background with a soft brand tint at the top) behind every screen, including behind the iPad split views so no plain fill shows under the floating tab bar, `keepshireCard()` raised cards, `KeepshirePrimaryButtonStyle` / `KeepshireSecondaryButtonStyle`, `KeepshireIconTile` (symbol in a tinted or gradient rounded square, used for rows, categories, settings, and empty states), `KeepshireHero` (logo or symbol, rounded title, subtitle) on auth and Web Upload, `keepshireFieldStyle()` for password fields, and `KeepshirePlaceholder` for the empty Categories column before a category is chosen. `KeepshireAppearance` sets rounded navigation titles app-wide. Gallery tiles are rounded with gaps; the media viewer stays black and full screen |
 | X4 | Orientations | iPhone: portrait + landscape; iPad: all four |
 | X5 | Localization | English source strings use string catalogs in the app and Share Extension; layouts use leading/trailing semantics and the numeric keypad intentionally stays left-to-right. |
 | X6 | Accessibility | Auth choices, secret passcode entry count, number pad, vault/folder rows, preview actions, trash actions, web upload, and player controls have VoiceOver labels. Number-pad keys and passcode fields scale with Dynamic Type and retain 44-point targets. |

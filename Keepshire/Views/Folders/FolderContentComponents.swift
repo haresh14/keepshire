@@ -67,11 +67,7 @@ struct FolderContentEmptyState: View {
     let configuration: EmptyStateConfiguration
 
     var body: some View {
-        VStack {
-            EmptyStateView(configuration)
-                .padding(.top, 80)
-            Spacer()
-        }
+        EmptyStateView(configuration)
     }
 }
 
@@ -95,9 +91,16 @@ struct FolderContentList: View {
     let shareFile: (VaultItem) -> Void
     let deleteFile: (VaultItem) -> Void
     let swipeDeleteFile: (VaultItem) -> Void
+    var header: AnyView? = nil
 
     var body: some View {
         List {
+            if let header {
+                header
+                    .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
             if !folders.isEmpty {
                 Section("Folders") {
                     ForEach(folders) { folder in

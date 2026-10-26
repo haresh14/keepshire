@@ -120,6 +120,9 @@ struct SettingsView: View {
                     settingsDetail
                 }
             }
+            // The split container draws a plain fill under the floating tab bar;
+            // the brand background goes behind it so the top matches other tabs.
+            .background(KeepshireBackground())
         } else {
             NavigationStack {
                 completeSettingsForm

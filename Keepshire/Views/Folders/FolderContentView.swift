@@ -42,20 +42,6 @@ struct FolderContentView: View {
                 FolderContentEmptyState(configuration: emptyStateConfiguration)
             }
         }
-        // The breadcrumb is a horizontal ScrollView. Stacking it above the list in a
-        // VStack makes the navigation bar bind its large title and search drawer to
-        // that strip instead of the list, which is why both went missing. As a safe
-        // area inset it stays pinned without becoming the primary scroll view.
-        .safeAreaInset(edge: .top, spacing: 0) {
-            FolderBreadcrumbView(
-                folder: folder,
-                navigationPath: $navigationPath,
-                onNavigateToFolder: onNavigateToFolder
-            )
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(.bar)
-        }
         .navigationTitle(folder?.displayName ?? "Folders")
         // Inline, unlike the other tabs. A large title is laid out from the list's
         // scroll offset, and the pinned breadcrumb inset sits in the space it expands
@@ -158,7 +144,18 @@ struct FolderContentView: View {
             moveFile: moveFile,
             shareFile: { ShareManager.shared.shareVaultItem($0) },
             deleteFile: { viewModel.prepareSwipeDeleteAlert(for: [$0]) },
-            swipeDeleteFile: { viewModel.prepareSwipeDeleteAlert(for: [$0]) }
+            swipeDeleteFile: { viewModel.prepareSwipeDeleteAlert(for: [$0]) },
+            // The breadcrumb is the list's first row, on the same background as
+            // everything else. Stacked above the list in a VStack it would take the
+            // navigation bar's scroll binding; pinned as an inset it needed its own
+            // opaque strip, which cut the screen in two.
+            header: AnyView(
+                FolderBreadcrumbView(
+                    folder: folder,
+                    navigationPath: $navigationPath,
+                    onNavigateToFolder: onNavigateToFolder
+                )
+            )
         )
     }
 

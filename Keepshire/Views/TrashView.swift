@@ -133,7 +133,7 @@ struct TrashView: View {
                 artwork: .symbol("trash.fill"),
                 title: "Trash is Empty",
                 subtitle: "When you delete files with trash enabled, they appear here. You can restore them or delete them for good.",
-                artworkSize: 68
+                artworkSize: 72
             )
             
             VStack(spacing: 12) {

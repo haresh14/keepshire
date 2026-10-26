@@ -201,6 +201,9 @@ flowchart LR
     EmptyStateView --> EmptyStateConfiguration
     EmptyStateConfigurations --> EmptyStateConfiguration
     EmptyStateView --> EmptyStateActionButton
+    EmptyStateView --> KeepshireIconTile
+    CategoryFilesEmptyState --> EmptyStateView
+    FolderContentEmptyState --> EmptyStateView
 ```
 
 ## 4. Storage and Core Data

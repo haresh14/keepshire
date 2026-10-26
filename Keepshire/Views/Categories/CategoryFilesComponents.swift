@@ -6,24 +6,22 @@ struct CategoryFilesEmptyState: View {
     let searchText: String
 
     var body: some View {
-        VStack(spacing: 20) {
-            KeepshireIconTile(
-                systemName: isSearching ? "magnifyingglass" : categoryType.systemImage,
-                tint: categoryType.color,
-                size: 76
-            )
-            Text(isSearching ? "No Results" : "No \(categoryType.rawValue)")
-                .font(.system(.title2, design: .rounded, weight: .semibold))
-            Text(
-                isSearching
-                    ? "No \(categoryType.rawValue.lowercased()) match '\(searchText)'"
-                    : "Files of this type will appear here when you add them to your vault"
-            )
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        EmptyStateView(EmptyStateConfiguration(
+            iconName: isSearching ? "magnifyingglass" : categoryType.systemImage,
+            customIcon: nil,
+            title: isSearching ? "No Results" : "No \(categoryType.rawValue)",
+            subtitle: isSearching
+                ? "No \(categoryType.rawValue.lowercased()) match '\(searchText)'"
+                : "Files of this type will appear here when you add them to your vault",
+            additionalMessage: nil,
+            primaryAction: nil,
+            secondaryAction: nil,
+            style: .default,
+            animation: .gentle,
+            spacing: 16,
+            maxWidth: nil,
+            contentPadding: EdgeInsets()
+        ))
         .background(KeepshireBackground())
     }
 }

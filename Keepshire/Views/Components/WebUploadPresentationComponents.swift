@@ -164,34 +164,30 @@ struct WebExportUnlockSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Image(systemName: "arrow.down.circle")
-                    .font(.system(size: 48))
-                    .foregroundColor(KeepshireTheme.accent)
-                Text("Allow downloads for 10 minutes")
-                    .font(.headline)
-                Text("Confirm it's you before the browser can pull files out of the vault.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+            VStack(spacing: 18) {
+                KeepshireHero(
+                    artwork: .symbol("arrow.down.circle.fill"),
+                    title: "Allow downloads for 10 minutes",
+                    subtitle: "Confirm it's you before the browser can pull files out of the vault.",
+                    artworkSize: 64
+                )
+                .padding(.top, 8)
 
                 if BiometricAuthManager.shared.canUseBiometrics() {
                     Button(action: authenticateWithBiometrics) {
                         Label(biometricButtonTitle, systemImage: biometricButtonIcon)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(KeepshireTheme.accent.opacity(0.1))
-                            .cornerRadius(10)
                     }
+                    .buttonStyle(KeepshireSecondaryButtonStyle())
                     .accessibilityIdentifier("webUpload.exportFaceID")
                 }
 
                 SecureField("Vault passcode or password", text: $credential)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.plain)
                     .focused($isFocused)
                     .submitLabel(.go)
                     .onSubmit(verifyCredential)
                     .accessibilityIdentifier("webUpload.exportCredential")
+                    .keepshireFieldStyle()
 
                 if let errorMessage {
                     Text(errorMessage)
@@ -200,10 +196,15 @@ struct WebExportUnlockSheet: View {
                 }
 
                 Button("Allow Downloads", action: verifyCredential)
+                    .buttonStyle(KeepshirePrimaryButtonStyle())
                     .disabled(credential.isEmpty)
                 Spacer()
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
+            .background(KeepshireBackground())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -389,7 +390,11 @@ struct WebUploadQRCodeView: View {
                 .buttonStyle(KeepshirePrimaryButtonStyle())
                 Spacer()
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
+            .background(KeepshireBackground())
             .navigationTitle("QR Code")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -450,7 +455,7 @@ struct InstructionsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Getting Started").font(.title2).fontWeight(.bold)
+                        Text("Getting Started").font(.system(.title2, design: .rounded, weight: .bold))
                         Text("Follow these steps to upload files from any device:")
                             .font(.subheadline).foregroundColor(.secondary)
                     }
@@ -461,19 +466,26 @@ struct InstructionsView: View {
                         DetailedInstructionStep(number: "4", title: "Pair the browser", description: "Type the 6-digit pairing code shown under Web Upload. The code changes every time you start the server.")
                         DetailedInstructionStep(number: "5", title: "Upload Files", description: "Drag and drop files onto the upload area, or click to browse and select files. Multiple files can be uploaded at once.")
                     }
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Supported File Types").font(.title2).fontWeight(.bold)
+                    .keepshireCard()
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Supported File Types").font(.system(.title3, design: .rounded, weight: .bold))
                         Text("• Images: JPEG, PNG, HEIC, GIF\n• Videos: MP4, MOV, M4V\n• Documents: PDF, DOC, DOCX, TXT\n• And many more...")
                             .font(.subheadline).foregroundColor(.secondary)
                     }
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Troubleshooting").font(.title2).fontWeight(.bold)
+                    .keepshireCard()
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Troubleshooting").font(.system(.title3, design: .rounded, weight: .bold))
                         Text("• Make sure both devices are on the same WiFi network\n• Accept the HTTPS certificate warning once per session\n• Check that your firewall isn't blocking connections\n• Try restarting the server if connections fail\n• Ensure the app stays active during uploads")
                             .font(.subheadline).foregroundColor(.secondary)
                     }
+                    .keepshireCard()
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .frame(maxWidth: 640)
+                .frame(maxWidth: .infinity)
             }
+            .keepshireBackground()
             .navigationTitle("Instructions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -497,8 +509,7 @@ struct DetailedInstructionStep: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .frame(width: 32, height: 32)
-                .background(KeepshireTheme.accent)
-                .clipShape(Circle())
+                .background(Circle().fill(KeepshireTheme.actionGradient))
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(description).font(.subheadline).foregroundColor(.secondary)
