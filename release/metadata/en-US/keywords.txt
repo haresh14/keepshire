@@ -1,0 +1,1 @@
+gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock,hidden,pdf,pin

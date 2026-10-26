@@ -55,7 +55,7 @@ Listing fields that are not in the binary:
 |--------|--------|
 | Name (30) | Keepshire: Private Photo Vault |
 | Subtitle (30) | Hide photos, videos & files |
-| Keywords | `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock` |
+| Keywords | `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock,hidden,pdf,pin` |
 | Privacy | `https://keepshire.haresh.dev/privacy` |
 | Support | `https://keepshire.haresh.dev/support` |
 | Bundle ID | `dev.haresh.keepshire` |
@@ -115,8 +115,8 @@ Import from Photos or the Files app, or send from a browser on the same Wi-Fi. O
 If you forget your vault passcode or password, the files cannot be recovered.
 ```
 
-- Keywords: `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock`
-- Screenshots: iPhone 6.7" (required) plus iPad 12.9" if you ship iPad. No vault contents that look like someone else’s photos.
+- Keywords: `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock,hidden,pdf,pin`
+- Screenshots: iPhone 6.9" and iPad 13" (both required because the app runs on iPad). `release/screenshots.sh` captures them with generated sample photos; see [release.md](../release.md).
 - Review notes (paste):
 
 ```

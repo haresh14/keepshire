@@ -49,7 +49,7 @@ These values live in App Store Connect, not in the binary (except the home-scree
 |--------|--------|
 | Name (30) | Keepshire: Private Photo Vault |
 | Subtitle (30) | Hide photos, videos & files |
-| Keywords | `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock` |
+| Keywords | `gallery,locker,album,encrypted,passcode,secure,folder,document,audio,secret,lock,hidden,pdf,pin` |
 | Handle | @keepshire |
 
 ---
@@ -477,7 +477,7 @@ These are confirmed absences. Do not treat them as regressions unless product ad
 | Target | Coverage (current files) |
 |--------|---------------------------|
 | KeepshireTests | Keychain (including derivation record), Core Data save-without-crash, storage/crypto/thumbnails/trash, chunked vault blobs, tmp share sweep, fail-closed passcode migration, VaultCryptoService PBKDF2, Security, Biometric, authentication coordination, shared imports, Folder and VaultMain view models, WebServer HTML/HTTP helpers, DI, EmptyState, video lifecycle |
-| KeepshireUITests | First-launch authentication, tab/navigation, fake-vault restrictions, add controls, and launch smoke tests |
+| KeepshireUITests | First-launch authentication, tab/navigation, fake-vault restrictions, add controls, and launch smoke tests. `AppStoreScreenshotTests` captures App Store screenshots and is skipped unless `SCREENSHOT_DIR` is set |
 
 Upgrade work should run unit tests on the new SDK simulator and a smoke pass of UI tests. Tests are not a substitute for the checklist below.
 

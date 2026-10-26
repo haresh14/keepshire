@@ -1,0 +1,41 @@
+Keepshire is a private vault for the photos, videos, audio and documents you don't want sitting in your camera roll. There is no account to create and no cloud to trust: everything stays on your iPhone or iPad, encrypted.
+
+LOCKED THE WAY YOU WANT
+• Choose a 4-digit passcode, 6-digit passcode, or a full password
+• Optional Face ID or Touch ID
+• Auto-lock when you leave the app: immediately, after a few seconds or minutes, or never
+• The App Switcher shows a cover instead of your files
+
+ENCRYPTED ON YOUR DEVICE
+• Every file and thumbnail is encrypted with AES-GCM using a key derived from your passcode or password
+• File names, types and sizes are encrypted too
+• Vault files are excluded from iCloud and computer backups
+• No analytics, no ads, no tracking
+
+ORGANIZE EVERYTHING
+• Nested folders you can create, rename, move and delete
+• Gallery and category views: Favorites, Photos, Videos, Audio, Documents and more
+• Search, sort, favorites and multi-select
+• Optional trash with restore
+
+IMPORT YOUR WAY
+• Pick photos and videos from your library
+• Add any file from the Files app
+• Send files from the Share sheet in other apps
+• Web Upload: send files from a computer's browser on the same Wi-Fi, over HTTPS, paired with a one-time code
+
+VIEW WITHOUT LEAVING THE VAULT
+• Zoom and swipe through photos
+• Video player with scrubbing, skip and playback speed
+• Audio playback, PDF viewer and previews for common documents
+
+EXTRA PROTECTION
+• Screenshot blanking: screenshots of the vault come out black
+• Screen recording cover
+• Shake or flip your phone to lock instantly
+• Decoy passcode that opens an empty vault
+
+Important: there is no back door. If you forget your vault passcode or password, your files cannot be recovered — not by us, not by anyone.
+
+Privacy policy: https://keepshire.haresh.dev/privacy
+Support: https://keepshire.haresh.dev/support

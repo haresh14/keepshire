@@ -205,4 +205,5 @@ A broader regression list is in [docs/FEATURES.md](docs/FEATURES.md#9-upgrade-ve
 - Xcode basics: [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)
 - Command-line device install and scheduling: [Install on a device from the command line](#install-on-a-device-from-the-command-line)
 - Testing checklist: [docs/TESTING_CHECKLIST.md](docs/TESTING_CHECKLIST.md)
+- App Store release (archive, upload, screenshots, listing metadata): [release.md](release.md)
 - Troubleshooting: [docs/DEVELOPER_GUIDE.md#troubleshooting](docs/DEVELOPER_GUIDE.md#troubleshooting)

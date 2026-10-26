@@ -217,6 +217,8 @@ struct FolderContentToolbar: ToolbarContent {
                     } label: {
                         Image(systemName: "ellipsis.circle").foregroundColor(KeepshireTheme.accent)
                     }
+                    .accessibilityIdentifier("folder.actions")
+                    .accessibilityLabel("Folder actions")
                 }
             }
         }

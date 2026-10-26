@@ -1,0 +1,18 @@
+Keepshire is a local, encrypted file vault. There is no account, login, server, or cloud sync, so no demo account is needed.
+
+HOW TO REVIEW
+1. On first launch choose "6-digit passcode" and enter any code twice (for example 123456). Face ID is optional.
+2. Tap + to import a photo from the library (system photo picker, no photo-library permission needed) or a file from the Files app.
+3. Open the item to preview it. Folders, Category and Gallery tabs show the same vault content in different views.
+4. Settings shows lock options, screenshot blanking, shake/flip to lock, the decoy passcode, and the trash.
+
+WEB UPLOAD (optional, local network only)
+The Web Upload tab starts an HTTPS server on the device (port 8080) so a browser on the same Wi-Fi can upload files. The certificate is self-signed and created on the device, so the browser shows a trust warning; continue past it and enter the 6-digit pairing code shown in the app. Downloads additionally require Face ID or the vault credential. The app asks for Local Network permission only when you start the server, and for notification permission so it can report finished transfers in the background.
+
+ENCRYPTION
+The app encrypts user-selected files and metadata on device with AES-GCM (CryptoKit). The encryption key is derived from the user's vault credential with PBKDF2-HMAC-SHA256 (CommonCrypto); Keychain material is ThisDeviceOnly. The optional local-network transfer server uses HTTPS (Network framework) with a new self-signed ECDSA certificate per server session. Vault files are excluded from backup.
+
+SCREENSHOT BLANKING
+When enabled, screenshots taken inside the app are black. This uses a standard secure text field layer; it does not block the screenshot itself.
+
+If you forget the passcode during review, delete and reinstall the app to start a new empty vault.
