@@ -21,7 +21,7 @@ Keep Keepshire building with the **iOS 27 SDK (Xcode 27)** without changing prod
 | Face ID | `NSFaceIDUsageDescription` = `Use Face ID to unlock Keepshire` |
 | Local network | `NSLocalNetworkUsageDescription` for LAN web upload |
 | Background modes | None declared; LAN uploads use finite foreground-app background time |
-| Launch screen | Explicit `UILaunchScreen` dictionary |
+| Launch screen | Explicit `UILaunchScreen` dictionary (`LaunchBackground` colour, `AppLogo` image) |
 | Scene manifest | Explicit in Info.plist |
 | Warning dump | [docs/ios27-baseline-warnings.txt](ios27-baseline-warnings.txt) |
 

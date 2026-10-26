@@ -58,6 +58,7 @@ struct KeepshireApp: App {
 
 private struct KeepshireRootView: View {
     let dependencies: DependencyContainer
+    @State private var isShowingSplash = true
 
     var body: some View {
         ContentView()
@@ -76,6 +77,12 @@ private struct KeepshireRootView: View {
                     .padding(24)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(uiColor: .systemBackground))
+                }
+            }
+            .overlay {
+                // Cold launch only; it ignores touches, so the UI underneath is live.
+                if isShowingSplash {
+                    SplashView { isShowingSplash = false }
                 }
             }
             .onAppear {

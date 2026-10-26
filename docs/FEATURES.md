@@ -71,7 +71,7 @@ These values live in App Store Connect, not in the binary (except the home-scree
 | `UIBackgroundModes` | Not declared | In-flight LAN uploads use finite `beginBackgroundTask` time |
 | Scene manifest | Multiple scenes disabled | One SwiftUI `WindowGroup`; no second unlocked vault window |
 | Policy / support URLs | `https://keepshire.haresh.dev/privacy`, `https://keepshire.haresh.dev/support` | Settings → About |
-| Launch screen | Explicit empty `UILaunchScreen` dictionary | Required when linking with iOS 27 SDK |
+| Launch screen | `UILaunchScreen` with `UIColorName` `LaunchBackground` and `UIImageName` `AppLogo` (120 pt rounded logo, centered) | An explicit dictionary is required when linking with iOS 27 SDK. `SplashView` starts from the same frame |
 | Signing | Automatic | Team `AYL8H487NP` |
 | Entitlements | App Group only | `group.dev.haresh.keepshire`; no iCloud, associated domains, or push entitlement |
 
@@ -129,6 +129,8 @@ No Bonjour services are advertised, so `NSBonjourServices` is not declared.
 
 ### 3.1 First launch
 
+Every cold launch shows the static launch screen (logo on `LaunchBackground`), then `SplashView`: the logo pops, a brand-gradient ring pulses out, the wordmark rises in, and the splash fades (about 1.4 s; a short cross-fade with Reduce Motion). The splash ignores touches, so the screen underneath is already interactive. It does not appear when returning from the background.
+
 1. `AppDataManager.isFirstLaunch` is true.
 2. `performFirstLaunchCleanup()` wipes vault files and thumbnails, Keychain, UserDefaults (except launch flag), and Core Data.
 3. Sets **`trashEnabled = true`**.
@@ -167,7 +169,7 @@ Every item below is a **must-keep** behavior unless product explicitly drops it.
 
 | ID | Feature | User-visible behavior | Implementation | Apple APIs |
 |----|---------|----------------------|----------------|------------|
-| A1 | Choose auth type | First launch: 6-digit passcode is selected by default; 4-digit passcode and alphanumeric password remain available. Setup warns that forgotten credentials cannot be recovered. | `AuthTypeSelectionView`, stored in UserDefaults `authenticationType` | SwiftUI |
+| A1 | Choose auth type | First launch: 6-digit passcode is selected by default; 4-digit passcode and alphanumeric password remain available. The app logo, cards, and Continue share one column (20 pt margins, max 560 pt wide on iPad); Continue and the warning that forgotten credentials cannot be recovered are pinned to the bottom. | `AuthTypeSelectionView`, stored in UserDefaults `authenticationType` | SwiftUI |
 | A2 | 4-digit passcode setup | Numeric only, exact length 4, confirm step, OTP-style fields + custom number pad. Explicitly described as weaker than 6-digit. | `PasscodeSetupView`, `OTPStylePasscodeView`, `CustomNumberPadView` | SwiftUI |
 | A3 | 6-digit passcode setup | Same as A2, length 6 | same | SwiftUI |
 | A4 | Password setup | Minimum **6** characters, confirmation, strength UI | `PasswordSetupView` | SwiftUI |

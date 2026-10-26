@@ -15,12 +15,13 @@ Face ID, local network, and launch screen strings are already in `Keepshire/Info
 ## First launch
 
 1. [ ] Delete the app (or use DEBUG Settings → Simulate First Launch Cleanup)
-2. [ ] Launch: **Security Setup** with 4-digit passcode, 6-digit passcode, and password
-3. [ ] Continue into setup:
+2. [ ] Launch: logo launch screen, then the animated splash (logo pop, ring, wordmark) fades into **Security Setup** with no jump; light and dark
+3. [ ] **Security Setup** shows 4-digit passcode, 6-digit passcode, and password; cards and Continue have the same width on iPhone and iPad
+4. [ ] Continue into setup:
    - [ ] 4-digit: exact length, confirm match
    - [ ] 6-digit: exact length, confirm match
    - [ ] Password: minimum 6 characters, confirm match
-4. [ ] After setup, the five tabs appear: Folder, Category, Gallery, Web Upload, Settings
+5. [ ] After setup, the five tabs appear: Folder, Category, Gallery, Web Upload, Settings
 
 ## Main tabs
 
