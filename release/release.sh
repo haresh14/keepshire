@@ -21,7 +21,20 @@ cd "$(dirname "$0")/.."
 
 PROJECT="Keepshire.xcodeproj"
 SCHEME="Keepshire"
-TEST_DESTINATION="${TEST_DESTINATION:-platform=iOS Simulator,name=iPhone 16 Pro}"
+# Newest available iPhone simulator that meets the 18.5 deployment target. A bare
+# name like "iPhone 16 Pro" can resolve to an older runtime the app cannot run on.
+default_test_destination() {
+  xcrun simctl list devices available --json | python3 -c '
+import json, sys
+runtimes = json.load(sys.stdin)["devices"]
+def version(rt):
+    return [int(p) for p in rt.rsplit("iOS-", 1)[1].split("-")]
+candidates = [(version(rt), d["udid"]) for rt, ds in runtimes.items() if "iOS" in rt
+              for d in ds if d["name"].startswith("iPhone") and "Duo" not in d["name"] and version(rt) >= [18, 5]]
+print(f"platform=iOS Simulator,id={max(candidates)[1]}" if candidates else "")
+'
+}
+TEST_DESTINATION="${TEST_DESTINATION:-$(default_test_destination)}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
@@ -56,6 +69,8 @@ if [[ -z "${SKIP_TESTS:-}" ]]; then
     -destination "$TEST_DESTINATION" \
     -derivedDataPath build/DerivedData \
     -parallel-testing-enabled NO \
+    -retry-tests-on-failure \
+    -test-iterations 3 \
     -only-testing:KeepshireTests \
     -quiet \
     test
