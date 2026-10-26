@@ -45,7 +45,7 @@ The privacy, support, and marketing pages are deployed from [`web/`](web/) on Ve
 | [`release/tools/sample-photos.swift`](release/tools/sample-photos.swift) | Generates 12 neutral, license-free sample photos used as screenshot content |
 | [`release/screenshots/`](release/screenshots/) | Raw captured PNGs: `iphone-6.9/` and `ipad-13/` |
 | [`release/tools/marketing-assets.swift`](release/tools/marketing-assets.swift) | Builds the captioned screenshots, product page header and search results image from the raw captures |
-| [`release/app-preview.sh`](release/app-preview.sh) | Records and encodes the app preview videos (used for iPhone; the iPad preview is recorded by hand, see [§7a](#7a-app-store-marketing-assets)) |
+| [`release/app-preview.sh`](release/app-preview.sh) | Records and encodes the iPhone and iPad app preview videos |
 | [`release/assets/`](release/assets/) | Upload-ready marketing assets ([§7a](#7a-app-store-marketing-assets)) |
 | [`release/metadata/en-US/`](release/metadata/en-US/) | Paste-ready listing text: name, subtitle, promotional text, description, keywords, release notes, URLs |
 | [`release/metadata/review_information/notes.txt`](release/metadata/review_information/notes.txt) | Notes for App Review (how to test, Web Upload, encryption) |
@@ -152,7 +152,7 @@ Built to Apple's [App Store asset best practices](https://developer.apple.com/ap
 | Product page header | `product-page-header.png` | 21:9, 3840 × 1646 PNG |
 | Search results | `search-results.png` | 3:2, 3840 × 2560 PNG |
 | App preview, iPhone 6.9" | `app-preview/iphone-6.9.mov` | 886 × 1920, 30 fps H.264 High@4.0, 11 Mbps, silent 256 kbps AAC, 15–30 s |
-| App preview, iPad 13" (record manually) | `app-preview/ipad-13.mov` | 1200 × 1600, same encoding |
+| App preview, iPad 13" | `app-preview/ipad-13.mov` | 1200 × 1600, same encoding |
 
 How they follow the guidelines:
 
@@ -171,12 +171,12 @@ release/screenshots.sh
 swift release/tools/marketing-assets.swift .
 ```
 ```bash
-IPAD_SIM=skip release/app-preview.sh
+release/app-preview.sh
 ```
 
-The first refreshes the raw captures. The second rebuilds the captioned screenshots, header and search art from them; edit the captions at the top of [`release/tools/marketing-assets.swift`](release/tools/marketing-assets.swift). The third records the iPhone preview; it needs `ffmpeg` (`brew install ffmpeg`). Like the screenshot test, the preview test turns Screenshot Protection and Screen Recording Protection off before recording and back on at the end. The automated test runner sometimes stalls before launching the app; if a run sits on the Home Screen for more than a few minutes, stop it and run it again.
+The first refreshes the raw captures. The second rebuilds the captioned screenshots, header and search art from them; edit the captions at the top of [`release/tools/marketing-assets.swift`](release/tools/marketing-assets.swift). The third records both previews; it needs `ffmpeg` (`brew install ffmpeg`). Use `IPHONE_SIM=skip` or `IPAD_SIM=skip` to record one device. Like the screenshot test, the preview test turns Screenshot Protection and Screen Recording Protection off before recording and back on at the end. The automated test runner sometimes stalls before launching the app; if a run sits on the Home Screen for more than a few minutes, stop it and run it again. If xcodebuild hangs after the tour has finished, the script stops it after a minute and encodes the clip anyway.
 
-### Recording the iPad preview by hand
+### Recording a preview by hand
 
 1. In Keepshire on an iPad 13" simulator (or device), go to Settings → Security → Advanced Security and turn off **Screenshot Protection** and **Screen Recording Protection**. Import a few neutral photos first.
 2. Record 18–28 seconds of the same tour: unlock → Folders → Gallery → open a photo and swipe once → close → Web Upload → Folders. Move slowly; no fast cuts. On a simulator:

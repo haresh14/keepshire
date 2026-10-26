@@ -87,7 +87,7 @@ capture() {
     -scheme "$SCHEME" \
     -destination "id=$udid" \
     -derivedDataPath "$DERIVED_DATA" \
-    -only-testing:KeepshireUITests/AppStoreScreenshotTests \
+    -only-testing:KeepshireUITests/AppStoreScreenshotTests/testCaptureAppStoreScreenshots \
     -parallel-testing-enabled NO \
     test-without-building
 

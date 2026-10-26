@@ -100,9 +100,32 @@ record() {
     -only-testing:KeepshireUITests/AppStoreScreenshotTests/testRecordAppPreview \
     -parallel-testing-enabled NO \
     -quiet \
-    test-without-building || { kill -INT $recorder; wait $recorder || true; exit 1; }
+    test-without-building &
+  local runner=$!
+
+  # xcodebuild sometimes hangs during teardown after the test has passed. Once the
+  # tour has written its end marker (the test then only re-enables protections),
+  # give it a minute to exit on its own before stopping it.
+  local waited=0
+  while kill -0 $runner 2>/dev/null; do
+    if [[ -f "$work/preview-end.txt" ]]; then
+      waited=$((waited + 1))
+      if (( waited > 60 )); then
+        log "xcodebuild did not exit after the tour finished; stopping it"
+        kill $runner 2>/dev/null || true
+        break
+      fi
+    fi
+    sleep 1
+  done
+  wait $runner 2>/dev/null || true
   kill -INT $recorder
   wait $recorder || true
+
+  if [[ ! -f "$work/preview-end.txt" ]]; then
+    log "The preview test did not finish the tour; see the xcodebuild output above"
+    exit 1
+  fi
   xcrun simctl status_bar "$udid" clear
 
   local start end duration
