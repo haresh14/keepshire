@@ -131,8 +131,8 @@ No Bonjour services are advertised, so `NSBonjourServices` is not declared.
 
 Every cold launch shows the static launch screen (logo on the deep teal `LaunchBackground`), then `SplashView`: a teal-to-green glow blooms behind the logo as it settles, the wordmark and tagline rise in, and the splash exits with a zoom-through (the logo grows and fades as the app appears). About 1.9 s with non-bouncing curves; a short cross-fade with Reduce Motion. The splash ignores touches, so the screen underneath is already interactive. It does not appear when returning from the background.
 
-1. `AppDataManager.isFirstLaunch` is true.
-2. `performFirstLaunchCleanup()` wipes vault files and thumbnails, Keychain, UserDefaults (except launch flag), and Core Data.
+1. `AppDataManager.isFirstLaunch` is true (UserDefaults are gone after a delete and reinstall, but iOS keeps Keychain items).
+2. `KeepshireApp.init` runs `performFirstLaunchCleanup()` before any view exists, so the authentication coordinator never sees a credential left over from a previous install. It wipes vault files and thumbnails, Keychain, UserDefaults (except launch flag), and Core Data.
 3. Sets **`trashEnabled = true`**.
 4. User must choose an authentication type, then set the credential.
 
@@ -170,7 +170,7 @@ Every item below is a **must-keep** behavior unless product explicitly drops it.
 | ID | Feature | User-visible behavior | Implementation | Apple APIs |
 |----|---------|----------------------|----------------|------------|
 | A1 | Choose auth type | First launch: 6-digit passcode is selected by default; 4-digit passcode and alphanumeric password remain available. The page has no navigation bar: a brand-tinted hero (app logo, "Secure your vault") sits above raised cards, centred in the space above the footer. The selected card gets an accent border and tint and a gradient icon tile; 6-digit carries a "Recommended" badge. Hero, cards, and the gradient Continue button share one column (20 pt margins, max 520 pt wide on iPad); Continue and the warning that forgotten credentials cannot be recovered are pinned to the bottom. | `AuthTypeSelectionView`, stored in UserDefaults `authenticationType` | SwiftUI |
-| A2 | 4-digit passcode setup | Numeric only, exact length 4, confirm step, OTP-style fields + custom number pad. Explicitly described as weaker than 6-digit. | `PasscodeSetupView`, `OTPStylePasscodeView`, `CustomNumberPadView` | SwiftUI |
+| A2 | 4-digit passcode setup | Numeric only, exact length 4, confirm step, OTP-style fields + custom number pad. The code boxes span exactly the keypad's width; the keypad's bottom-left slot is empty unless a caller supplies a help action. Explicitly described as weaker than 6-digit. | `PasscodeSetupView`, `OTPStylePasscodeView`, `CustomNumberPadView` | SwiftUI |
 | A3 | 6-digit passcode setup | Same as A2, length 6 | same | SwiftUI |
 | A4 | Password setup | Minimum **6** characters, confirmation, strength UI | `PasswordSetupView` | SwiftUI |
 | A5 | Store credential | Saved in Keychain, this-device-only, not iCloud Keychain sync | `KeychainManager.savePassword`, service `dev.haresh.keepshire`, account `userPassword` | Security.framework |
@@ -389,8 +389,9 @@ Fake login: **About only**.
 |----|---------|----------|
 | X1 | Alerts | SwiftUI `.alert` on folder, gallery, category, trash, and settings screens; `FolderViewModel` implements `AlertManageable` |
 | X2 | Sheets | SwiftUI `.sheet` / `.fullScreenCover` for pickers, add content, web upload, trash, and auth change |
-| X3 | Dark mode | System SwiftUI colors (`Color(.systemGray6)`, etc.) plus `KeepshireTheme`, which supplies light/dark brand colours from the asset catalog (`AccentColor`, `BrandGreen`). No custom theme engine and no per-user theme setting |
-| X3a | Brand palette | Colours are sampled from the app icon. Teal accent for actions, selection, folders, and progress; green reserved for success/protected states; the icon gradient appears only on authentication, the privacy cover, and branded empty states. File-type and category colours stay distinct on purpose |
+| X3 | Dark mode | System grouped colours plus `KeepshireTheme`, which supplies light/dark brand colours from the asset catalog (`AccentColor`, `BrandGreen`, `LaunchBackground`). No per-user theme setting |
+| X3a | Brand palette | Colours are sampled from the app icon. Teal accent for actions, selection, folders, and progress; green reserved for success/protected states; `actionGradient` (a darker cut of the icon sweep) fills primary buttons and selected tiles so white text stays readable. File-type and category colours stay distinct on purpose |
+| X3b | Visual style | Shared components in `KeepshireStyle.swift`: `KeepshireBackground` (grouped background with a soft brand tint at the top) behind every screen, `keepshireCard()` raised cards, `KeepshirePrimaryButtonStyle` / `KeepshireSecondaryButtonStyle`, `KeepshireIconTile` (symbol in a tinted or gradient rounded square, used for rows, categories, settings, and empty states), `KeepshireHero` (logo or symbol, rounded title, subtitle) on auth and Web Upload, `keepshireFieldStyle()` for password fields, and `KeepshirePlaceholder` for empty iPad detail columns. `KeepshireAppearance` sets rounded navigation titles app-wide. Gallery tiles are rounded with gaps; the media viewer stays black and full screen |
 | X4 | Orientations | iPhone: portrait + landscape; iPad: all four |
 | X5 | Localization | English source strings use string catalogs in the app and Share Extension; layouts use leading/trailing semantics and the numeric keypad intentionally stays left-to-right. |
 | X6 | Accessibility | Auth choices, secret passcode entry count, number pad, vault/folder rows, preview actions, trash actions, web upload, and player controls have VoiceOver labels. Number-pad keys and passcode fields scale with Dynamic Type and retain 44-point targets. |

@@ -39,70 +39,55 @@ struct PasscodeView: View {
     
     var body: some View {
         ZStack {
-            backgroundGradient
+            KeepshireBackground()
             
-            VStack {
-                Spacer()
-                
-                VStack(spacing: 30) {
-                    lockIcon
-                    if isSettingPasscode {
-                        titleText
-                    }
-                    subtitleText
-                    
-                    VStack(spacing: 20) {
-                        passcodeFields
-                        if !isSettingPasscode {
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(spacing: 32) {
+                        header
+                        
+                        VStack(spacing: 18) {
+                            passcodeFields
                             errorView
+                            if isSettingPasscode {
+                                actionButton
+                            }
+                            cancelButton
                         }
-                        if isSettingPasscode {
-                            errorView
-                            actionButton
-                        }
-                        cancelButton
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: 440)
+                    // Centred when it fits; scrolls on small screens or large text.
+                    .frame(maxWidth: .infinity, minHeight: proxy.size.height)
                 }
-                
-                Spacer()
-                
+                .scrollBounceBehavior(.basedOnSize)
+            }
+            .safeAreaInset(edge: .bottom) {
                 biometricButton
             }
-            .padding()
         }
         .onAppear(perform: handleOnAppear)
     }
     
     // MARK: - View Components
     
-    private var backgroundGradient: some View {
-        KeepshireTheme.brandWash
-            .ignoresSafeArea()
-    }
-    
-    private var lockIcon: some View {
-        Image(systemName: "lock.fill")
-            .font(.system(size: 60))
-            .foregroundColor(KeepshireTheme.accent)
-            .padding(.bottom, 20)
-    }
-    
-    private var titleText: some View {
-        Text(isSettingPasscode ? 
-             (isPasswordType ? "Set Your Password" : "Set Your Passcode") : 
-             (isPasswordType ? "Enter Password" : "Enter Passcode"))
-            .font(.largeTitle)
-            .fontWeight(.bold)
-    }
-    
-    private var subtitleText: some View {
-        Text(isSettingPasscode ? 
-             (isPasswordType ? "Create a secure password to protect your vault" : "Create a secure passcode to protect your vault") :
-             "Access your secure vault")
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal)
+    @ViewBuilder
+    private var header: some View {
+        if isSettingPasscode {
+            KeepshireHero(
+                artwork: .symbol("lock.fill"),
+                title: isPasswordType ? "Set Your Password" : "Set Your Passcode",
+                subtitle: isPasswordType ? "Create a secure password to protect your vault" : "Create a secure passcode to protect your vault",
+                artworkSize: 64
+            )
+        } else {
+            KeepshireHero(
+                title: "Welcome back",
+                subtitle: isPasswordType ? "Enter your password to open your vault" : "Enter your passcode to open your vault",
+                artworkSize: 72
+            )
+        }
     }
     
     @ViewBuilder
@@ -117,7 +102,7 @@ struct PasscodeView: View {
                         SecureField(isSettingPasscode ? "Password" : "Enter Password", text: $passcode)
                     }
                 }
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .textFieldStyle(.plain)
                 .focused($isPasscodeFocused)
                 .onSubmit(handlePasscodeSubmit)
                 
@@ -126,7 +111,7 @@ struct PasscodeView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(maxWidth: 300)
+            .keepshireFieldStyle()
             
             if isSettingPasscode {
                 HStack {
@@ -137,7 +122,7 @@ struct PasscodeView: View {
                             SecureField("Confirm Password", text: $confirmPasscode)
                         }
                     }
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.plain)
                     .onSubmit(handleSetPasscode)
                     
                     Button(action: { showPassword.toggle() }) {
@@ -145,7 +130,7 @@ struct PasscodeView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .frame(maxWidth: 300)
+                .keepshireFieldStyle()
             }
         } else if let digitCount = digitCount {
             // OTP-style passcode input
@@ -175,15 +160,15 @@ struct PasscodeView: View {
         } else {
             // Fallback to traditional input
             SecureField(isPasswordType ? "Password" : "Passcode", text: $passcode)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .frame(maxWidth: 300)
+                .textFieldStyle(.plain)
+                .keepshireFieldStyle()
                 .focused($isPasscodeFocused)
                 .onSubmit(handlePasscodeSubmit)
             
             if isSettingPasscode {
                 SecureField(isPasswordType ? "Confirm Password" : "Confirm Passcode", text: $confirmPasscode)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(maxWidth: 300)
+                    .textFieldStyle(.plain)
+                    .keepshireFieldStyle()
                     .onSubmit(handleSetPasscode)
             }
         }
@@ -204,13 +189,8 @@ struct PasscodeView: View {
         if isSettingPasscode {
             Button(action: handleButtonAction) {
                 Text(isPasswordType ? "Set Password" : "Set Passcode")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: 300)
-                    .padding()
-                    .background(buttonBackgroundColor)
-                    .cornerRadius(10)
             }
+            .buttonStyle(KeepshirePrimaryButtonStyle())
             .disabled(isButtonDisabled)
         }
     }
@@ -219,6 +199,7 @@ struct PasscodeView: View {
     private var cancelButton: some View {
         if let onCancel = onCancel {
             Button("Cancel", action: onCancel)
+                .font(.system(.body, design: .rounded, weight: .medium))
                 .foregroundColor(KeepshireTheme.accent)
         }
     }
@@ -227,22 +208,15 @@ struct PasscodeView: View {
     private var biometricButton: some View {
         if shouldShowBiometric {
             Button(action: authenticateWithBiometrics) {
-                HStack {
-                    Image(systemName: biometricIconName)
-                        .font(.title2)
-                    Text("Use \(biometricDisplayName)")
-                }
-                .foregroundColor(KeepshireTheme.accent)
+                Label("Use \(biometricDisplayName)", systemImage: biometricIconName)
             }
-            .padding(.bottom, 30)
+            .buttonStyle(KeepshireSecondaryButtonStyle())
+            .frame(maxWidth: 280)
+            .padding(.bottom, 16)
         }
     }
     
     // MARK: - Computed Properties
-    
-    private var buttonBackgroundColor: Color {
-        isButtonDisabled ? Color.gray : KeepshireTheme.accent
-    }
     
     private var isButtonDisabled: Bool {
         passcode.isEmpty || (isSettingPasscode && confirmPasscode.isEmpty)

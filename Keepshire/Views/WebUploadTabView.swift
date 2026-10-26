@@ -39,10 +39,12 @@ struct WebUploadTabView: View {
                     WebUploadSecurityNotice()
                     Spacer(minLength: 20)
                 }
-                .padding()
-                .frame(maxWidth: 760)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
+            .keepshireBackground()
             .navigationTitle("Web Upload")
             .navigationBarTitleDisplayMode(.inline)
         }

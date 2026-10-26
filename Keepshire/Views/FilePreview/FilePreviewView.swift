@@ -231,10 +231,9 @@ struct VaultPreviewDetail: View {
                     FilePreviewView(vaultItem: item, onClose: onClose)
                 }
             } else {
-                ContentUnavailableView(
-                    "Select a File",
-                    systemImage: "doc.viewfinder",
-                    description: Text("Choose a file to preview it here.")
+                KeepshirePlaceholder(
+                    title: "Select a File",
+                    message: "Choose a photo, video, or document to preview it here."
                 )
             }
         }

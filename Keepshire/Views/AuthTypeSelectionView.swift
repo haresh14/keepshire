@@ -33,7 +33,7 @@ struct AuthTypeSelectionView: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
             }
-            .background(background)
+            .background(KeepshireBackground())
             .safeAreaInset(edge: .bottom) { footer }
             .navigationTitle("Security Setup")
             .toolbar(.hidden, for: .navigationBar)
@@ -57,20 +57,6 @@ struct AuthTypeSelectionView: View {
     
     // MARK: - View Components
 
-    /// Grouped background with a soft brand tint across the top.
-    private var background: some View {
-        ZStack(alignment: .top) {
-            Color(.systemGroupedBackground)
-            LinearGradient(
-                colors: [KeepshireTheme.glowTeal.opacity(0.18), KeepshireTheme.glowGreen.opacity(0.06), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 420)
-        }
-        .ignoresSafeArea()
-    }
-    
     private var heroSection: some View {
         VStack(spacing: 18) {
             Image("AppLogo")
@@ -157,16 +143,6 @@ struct AuthTypeSelectionView: View {
         .buttonStyle(PressableButtonStyle())
         .accessibilityIdentifier("auth.continue")
         .accessibilityLabel("Continue with \(selectedType.displayName)")
-    }
-}
-
-/// Slight shrink while pressed, so custom-drawn buttons still feel tappable.
-private struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.smooth(duration: 0.15), value: configuration.isPressed)
     }
 }
 

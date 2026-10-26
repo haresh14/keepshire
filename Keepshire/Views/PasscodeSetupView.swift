@@ -40,19 +40,21 @@ struct PasscodeSetupView: View {
     }
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            VStack(spacing: 40) {
-                headerSection
-                passcodeInputSection
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 32) {
+                    headerSection
+                    passcodeInputSection
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                .frame(maxWidth: 440)
+                // Centred when it fits; scrolls on small screens or large text.
+                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
             }
-            
-            Spacer()
-            
-            bottomSection
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .padding()
+        .background(KeepshireBackground())
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -90,17 +92,16 @@ struct PasscodeSetupView: View {
     // MARK: - View Components
     
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 60))
-                .foregroundColor(KeepshireTheme.accent)
-            
-            Text(isConfirming ? 
-                 "Re-enter your \(digitCount)-digit \(isFakePasswordSetup ? "fake " : "")passcode" : 
-                 "Create a \(digitCount)-digit \(isFakePasswordSetup ? "fake " : "")passcode\(isFakePasswordSetup ? " that shows an empty vault when used" : " to protect your vault")")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 12) {
+            KeepshireHero(
+                artwork: .symbol(isFakePasswordSetup ? "theatermasks.fill" : (isConfirming ? "checkmark.shield.fill" : "lock.fill")),
+                title: isConfirming ? "Confirm passcode" : (isFakePasswordSetup ? "Fake passcode" : "Create passcode"),
+                subtitle: isConfirming ?
+                    "Re-enter your \(digitCount)-digit \(isFakePasswordSetup ? "fake " : "")passcode" :
+                    "Create a \(digitCount)-digit \(isFakePasswordSetup ? "fake " : "")passcode\(isFakePasswordSetup ? " that shows an empty vault when used" : " to protect your vault")",
+                artworkSize: 64
+            )
+            .animation(.smooth(duration: 0.25), value: isConfirming)
 
             if !isFakePasswordSetup {
                 Text("If you forget this passcode, Keepshire cannot recover your files.")
@@ -149,12 +150,6 @@ struct PasscodeSetupView: View {
                 .foregroundColor(.red)
                 .font(.caption)
                 .transition(.opacity)
-        }
-    }
-    
-    private var bottomSection: some View {
-        VStack(spacing: 16) {
-            // Empty for now since navigation is handled by toolbar
         }
     }
     

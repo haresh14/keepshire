@@ -7,12 +7,13 @@ struct CategoryFilesEmptyState: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: isSearching ? "magnifyingglass" : categoryType.systemImage)
-                .font(.system(size: 80))
-                .foregroundColor(.gray)
+            KeepshireIconTile(
+                systemName: isSearching ? "magnifyingglass" : categoryType.systemImage,
+                tint: categoryType.color,
+                size: 76
+            )
             Text(isSearching ? "No Results" : "No \(categoryType.rawValue)")
-                .font(.title2)
-                .fontWeight(.semibold)
+                .font(.system(.title2, design: .rounded, weight: .semibold))
             Text(
                 isSearching
                     ? "No \(categoryType.rawValue.lowercased()) match '\(searchText)'"
@@ -23,6 +24,7 @@ struct CategoryFilesEmptyState: View {
             .padding(.horizontal)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(KeepshireBackground())
     }
 }
 
@@ -30,7 +32,8 @@ struct CategoryFilesGrid: View {
     private enum Layout {
         static let minimumCellWidth: CGFloat = 100
         static let maximumCellWidth: CGFloat = 150
-        static let spacing: CGFloat = 2
+        static let spacing: CGFloat = 6
+        static let edgePadding: CGFloat = 14
     }
 
     let items: [VaultItem]
@@ -90,8 +93,10 @@ struct CategoryFilesGrid: View {
                     }
                 }
             }
-            .padding(.horizontal, Layout.spacing)
+            .padding(.horizontal, Layout.edgePadding)
+            .padding(.vertical, 8)
         }
+        .background(KeepshireBackground())
     }
 }
 

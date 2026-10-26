@@ -37,17 +37,22 @@ struct PasswordSetupView: View {
     }
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            VStack(spacing: 30) {
-                headerSection
-                passwordInputSection
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 28) {
+                    headerSection
+                    passwordInputSection
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                .frame(maxWidth: 480)
+                // Centred when it fits; scrolls above the keyboard and on small screens.
+                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
             }
-            
-            Spacer()
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .padding()
+        .background(KeepshireBackground())
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -70,17 +75,15 @@ struct PasswordSetupView: View {
     // MARK: - View Components
     
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            Image(systemName: isFakePasswordSetup ? "theatermasks.fill" : "key.fill")
-                .font(.system(size: 60))
-                .foregroundColor(isFakePasswordSetup ? .orange : KeepshireTheme.accent)
-            
-            Text(isFakePasswordSetup ? 
-                 "Create a fake password that shows an empty vault when used" :
-                 "Create a strong password to protect your vault")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 12) {
+            KeepshireHero(
+                artwork: .symbol(isFakePasswordSetup ? "theatermasks.fill" : "key.fill"),
+                title: isFakePasswordSetup ? "Fake password" : "Create password",
+                subtitle: isFakePasswordSetup ?
+                    "Create a fake password that shows an empty vault when used" :
+                    "Create a strong password to protect your vault",
+                artworkSize: 64
+            )
 
             if !isFakePasswordSetup {
                 Text("If you forget this password, Keepshire cannot recover your files.")
@@ -112,7 +115,7 @@ struct PasswordSetupView: View {
                         SecureField("Password", text: $password)
                     }
                 }
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .textFieldStyle(.plain)
                 .focused($isPasswordFocused)
                 .onSubmit {
                     isConfirmPasswordFocused = true
@@ -124,10 +127,12 @@ struct PasswordSetupView: View {
                 }
                 .accessibilityLabel(showPassword ? "Hide password" : "Show password")
             }
+            .keepshireFieldStyle()
             
             Text("Minimum 6 characters")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.leading, 4)
         }
     }
     
@@ -140,7 +145,7 @@ struct PasswordSetupView: View {
                     SecureField("Confirm Password", text: $confirmPassword)
                 }
             }
-            .textFieldStyle(RoundedBorderTextFieldStyle())
+            .textFieldStyle(.plain)
             .focused($isConfirmPasswordFocused)
             .onSubmit {
                 handlePasswordSetup()
@@ -152,6 +157,7 @@ struct PasswordSetupView: View {
             }
             .accessibilityLabel(showConfirmPassword ? "Hide confirmation password" : "Show confirmation password")
         }
+        .keepshireFieldStyle()
     }
     
     private var passwordStrengthIndicator: some View {
@@ -187,22 +193,11 @@ struct PasswordSetupView: View {
     
     private var setPasswordButton: some View {
         Button(action: handlePasswordSetup) {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .semibold))
-                Text(isFakePasswordSetup ? "Set Fake Password" : "Set Password")
-                    .font(.system(size: 17, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isButtonEnabled ? KeepshireTheme.accent : Color.gray)
-            )
+            Label(isFakePasswordSetup ? "Set Fake Password" : "Set Password", systemImage: "checkmark")
         }
+        .buttonStyle(KeepshirePrimaryButtonStyle())
         .disabled(!isButtonEnabled)
-        .buttonStyle(PlainButtonStyle())
+        .padding(.top, 4)
     }
     
     private var isButtonEnabled: Bool {

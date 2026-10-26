@@ -157,46 +157,41 @@ struct TrashView: View {
 
     
     private var emptyTrashView: some View {
-        VStack(spacing: 32) {
-            VStack(spacing: 20) {
-                Image(systemName: "trash")
-                    .font(.system(size: 80))
-                    .foregroundColor(KeepshireTheme.success)
-                
-                Text("Trash is Empty")
-                    .font(.title)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                
-                Text("When you delete files with trash enabled, they'll appear here as a gallery. You can restore them or permanently delete them.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
+        VStack(spacing: 28) {
+            KeepshireHero(
+                artwork: .symbol("trash.fill"),
+                title: "Trash is Empty",
+                subtitle: "When you delete files with trash enabled, they appear here. You can restore them or delete them for good.",
+                artworkSize: 68
+            )
             
-            VStack(spacing: 16) {
-                HStack(spacing: 12) {
-                    Image(systemName: "arrow.clockwise.circle.fill")
-                        .foregroundColor(KeepshireTheme.accent)
-                        .font(.title2)
-                    Text("Select items and restore to their original location")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack(spacing: 12) {
-                    Image(systemName: "trash.slash.circle.fill")
-                        .foregroundColor(.red)
-                        .font(.title2)
-                    Text("Permanently delete items you no longer need")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
+            VStack(spacing: 12) {
+                trashTip(
+                    systemImage: "arrow.uturn.backward",
+                    tint: KeepshireTheme.accent,
+                    text: "Select items and restore them to their original location"
+                )
+                trashTip(
+                    systemImage: "trash.slash.fill",
+                    tint: .red,
+                    text: "Permanently delete items you no longer need"
+                )
             }
         }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: 520)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .background(KeepshireBackground())
+    }
+
+    private func trashTip(systemImage: String, tint: Color, text: String) -> some View {
+        HStack(spacing: 12) {
+            KeepshireIconTile(systemName: systemImage, tint: tint, size: 36)
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .keepshireCard(padding: 12)
     }
     
     private var bottomActionBar: some View {
@@ -240,7 +235,7 @@ struct TrashView: View {
                 .accessibilityLabel("Permanently delete \(viewModel.selectedItems.count) selected items")
             }
             .padding(.horizontal)
-            .background(Color(.systemGray6))
+            .background(.bar)
         }
     }
     

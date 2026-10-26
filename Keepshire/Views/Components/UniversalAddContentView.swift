@@ -19,10 +19,10 @@ struct UniversalAddContentView: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("Add Content")
-                .font(.headline)
-                .padding(.top)
+                .font(.system(.title3, design: .rounded, weight: .bold))
+                .padding(.top, 8)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 // Photos & Videos
                 UniversalActionButton(
                     icon: "photo.on.rectangle.angled",
@@ -66,7 +66,11 @@ struct UniversalAddContentView: View {
             
             Spacer()
         }
-        .padding()
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
+        .background(KeepshireBackground())
     }
 }
 
@@ -81,18 +85,15 @@ struct UniversalActionButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-                    .frame(width: 30)
+                KeepshireIconTile(systemName: icon, tint: color, size: 44)
                         
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                         .foregroundColor(.primary)
                     
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 
@@ -102,12 +103,9 @@ struct UniversalActionButton: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(Color(.secondarySystemBackground))
-            .cornerRadius(12)
+            .keepshireCard(padding: 14)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(PressableButtonStyle())
         .accessibilityIdentifier("add.\(accessibilityName)")
         .accessibilityLabel(title)
         .accessibilityHint(subtitle)

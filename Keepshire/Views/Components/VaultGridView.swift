@@ -34,7 +34,11 @@ struct VaultGridView: View {
     // MARK: - Grid Configuration
     
     private var gridSpacing: CGFloat {
-        horizontalSizeClass == .regular ? 8 : 2
+        horizontalSizeClass == .regular ? 12 : 6
+    }
+
+    private var edgePadding: CGFloat {
+        horizontalSizeClass == .regular ? 20 : 14
     }
 
     private var columns: [GridItem] {
@@ -145,10 +149,12 @@ struct VaultGridView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, gridSpacing)
+                    .padding(.horizontal, edgePadding)
+                    .padding(.vertical, 8)
                 }
             }
         }
+        .background(KeepshireBackground())
     }
 }
 

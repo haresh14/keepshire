@@ -54,7 +54,7 @@ struct FolderContentView: View {
             )
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-                .background(Color(.systemGray6))
+                .background(.bar)
         }
         .navigationTitle(folder?.displayName ?? "Folders")
         // Inline, unlike the other tabs. A large title is laid out from the list's

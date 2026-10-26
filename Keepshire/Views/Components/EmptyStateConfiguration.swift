@@ -106,7 +106,7 @@ struct EmptyStateStyle {
         titleColor: .primary,
         subtitleFont: .title3,
         subtitleColor: .secondary,
-        backgroundColor: Color(.systemGray6)
+        backgroundColor: Color(.secondarySystemGroupedBackground)
     )
 }
 

@@ -28,7 +28,7 @@ struct VaultItemCell: View {
             
             ZStack {
                 Rectangle()
-                    .fill(Color.gray.opacity(0.2))
+                    .fill(Color(.secondarySystemGroupedBackground))
                     .frame(width: size, height: size)
                 
                 if let thumbnail = thumbnail {
@@ -55,8 +55,7 @@ struct VaultItemCell: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 2)
-                                .background(Color.black.opacity(0.65))
-                                .cornerRadius(3)
+                                .background(Capsule().fill(Color.black.opacity(0.55)))
                             Spacer()
                         }
                         Spacer()
@@ -114,7 +113,8 @@ struct VaultItemCell: View {
                     }
                 }
             }
-            .cornerRadius(4)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: isPressed)
         }

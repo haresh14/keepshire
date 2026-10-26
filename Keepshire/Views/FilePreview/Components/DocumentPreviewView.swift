@@ -141,8 +141,7 @@ struct DocumentQuickLookView: View {
                         .foregroundColor(.gray)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
-                        .background(Color.gray.opacity(0.3))
-                        .cornerRadius(8)
+                        .background(Capsule().fill(Color.gray.opacity(0.3)))
                 }
             }
             
@@ -150,10 +149,8 @@ struct DocumentQuickLookView: View {
                 createTemporaryFile()
                 showingQuickLook = true
             }
-            .padding()
-            .background(KeepshireTheme.accent)
-            .foregroundColor(.white)
-            .cornerRadius(10)
+            .buttonStyle(KeepshirePrimaryButtonStyle())
+            .frame(maxWidth: 280)
         }
         .padding()
     }

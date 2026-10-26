@@ -37,21 +37,25 @@ struct CategoryView: View {
                         selectedCategory = categoryType
                         clearPreview()
                     } label: {
-                        Label {
-                            HStack {
-                                Text(categoryType.rawValue)
-                                Spacer()
-                                Text("\(getItemCount(for: categoryType))")
-                                    .foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: categoryType.systemImage)
+                        HStack(spacing: 12) {
+                            KeepshireIconTile(systemName: categoryType.systemImage, tint: categoryType.color, size: 32)
+                            Text(categoryType.rawValue)
+                                .font(.system(.body, design: .rounded, weight: .medium))
+                            Spacer()
+                            Text("\(getItemCount(for: categoryType))")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(.secondary)
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(selectedCategory == categoryType ? Color.accentColor : Color.primary)
+                    .foregroundStyle(selectedCategory == categoryType ? KeepshireTheme.accent : Color.primary)
+                    .listRowBackground(
+                        selectedCategory == categoryType ? KeepshireTheme.accent.opacity(0.12) : nil
+                    )
                 }
                 .navigationTitle("Categories")
+                .keepshireBackground(hidesScrollBackground: true)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
             } content: {
                 if let selectedCategory {
@@ -62,10 +66,10 @@ struct CategoryView: View {
                     .id(selectedCategory)
                     .navigationSplitViewColumnWidth(min: 360, ideal: 500)
                 } else {
-                    ContentUnavailableView(
-                        "Select a Category",
-                        systemImage: "square.grid.2x2",
-                        description: Text("Choose a category from the sidebar.")
+                    KeepshirePlaceholder(
+                        title: "Select a Category",
+                        message: "Choose a category from the sidebar.",
+                        systemName: "square.grid.2x2.fill"
                     )
                 }
             } detail: {
@@ -85,8 +89,8 @@ struct CategoryView: View {
     private var categoryGrid: some View {
         ScrollView {
             LazyVGrid(columns: [
-                GridItem(.adaptive(minimum: 150), spacing: 16)
-            ], spacing: 16) {
+                GridItem(.adaptive(minimum: 150), spacing: 14)
+            ], spacing: 14) {
                 ForEach(CategoryType.allCases, id: \.self) { categoryType in
                     NavigationLink(destination: CategoryFilesView(
                         categoryType: categoryType
@@ -97,11 +101,13 @@ struct CategoryView: View {
                             itemCount: getItemCount(for: categoryType)
                         )
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(PressableButtonStyle())
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
         }
+        .keepshireBackground()
         .navigationTitle("Categories")
         .navigationBarTitleDisplayMode(.large)
     }

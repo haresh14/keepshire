@@ -21,10 +21,15 @@ struct OTPStylePasscodeView: View {
         self.onHelpTapped = onHelpTapped
     }
     
+    /// Matches `CustomNumberPadView`'s key size so the boxes span exactly the keypad width.
+    @ScaledMetric(relativeTo: .title2) private var keySize: CGFloat = CustomNumberPadView.baseKeySize
+
+    private var boxSpacing: CGFloat { digitCount > 4 ? 8 : 12 }
+
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: 32) {
             // Digit display
-            HStack(spacing: 12) {
+            HStack(spacing: boxSpacing) {
                 ForEach(0..<digitCount, id: \.self) { index in
                     DigitDisplay(
                         digit: digits[index],
@@ -36,6 +41,7 @@ struct OTPStylePasscodeView: View {
                     .accessibilityHidden(true)
                 }
             }
+            .frame(width: CustomNumberPadView.width(forKeySize: keySize))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(digitCount)-digit passcode")
             .accessibilityValue("\(passcode.count) of \(digitCount) digits entered")
@@ -97,29 +103,31 @@ struct DigitDisplay: View {
     let digit: String
     let isActive: Bool
     let onTap: () -> Void
-    @ScaledMetric(relativeTo: .body) private var fieldWidth: CGFloat = 50
-    @ScaledMetric(relativeTo: .body) private var fieldHeight: CGFloat = 60
+    @ScaledMetric(relativeTo: .body) private var fieldHeight: CGFloat = 58
     
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isActive ? KeepshireTheme.accent : Color.clear, lineWidth: 2)
-                    )
-                    .frame(
-                        width: min(fieldWidth, 66),
-                        height: min(fieldHeight, 78)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                    .shadow(color: .black.opacity(0.04), radius: 4, y: 1)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        isActive ? KeepshireTheme.accent : Color(.separator).opacity(0.4),
+                        lineWidth: isActive ? 2 : 0.5
                     )
                 
-                // Visual indicator - smaller dots
-                Text(digit.isEmpty ? "" : "●")
-                    .font(.body)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                if !digit.isEmpty {
+                    Circle()
+                        .fill(KeepshireTheme.actionGradient)
+                        .frame(width: 14, height: 14)
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: min(fieldHeight, 76))
+            .animation(.smooth(duration: 0.18), value: digit.isEmpty)
+            .animation(.smooth(duration: 0.18), value: isActive)
         }
         .buttonStyle(PlainButtonStyle())
     }

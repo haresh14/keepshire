@@ -6,7 +6,7 @@ struct EmptyStateActionButton: View {
         static let horizontalPadding: CGFloat = 24
         static let verticalPadding: CGFloat = 12
         static let maximumWidth: CGFloat = 200
-        static let cornerRadius: CGFloat = 10
+        static let cornerRadius: CGFloat = 14
         static let outlineWidth: CGFloat = 1.5
     }
 
@@ -20,25 +20,35 @@ struct EmptyStateActionButton: View {
                         .font(.system(size: 16, weight: .medium))
                 }
                 Text(action.title)
-                    .fontWeight(.semibold)
+                    .font(.system(.body, design: .rounded, weight: .semibold))
             }
             .foregroundColor(foregroundColor)
             .frame(maxWidth: buttonMaxWidth)
             .padding(.horizontal, Layout.horizontalPadding)
             .padding(.vertical, Layout.verticalPadding)
-            .background(backgroundColor)
-            .cornerRadius(buttonCornerRadius)
+            .background(
+                RoundedRectangle(cornerRadius: buttonCornerRadius, style: .continuous)
+                    .fill(backgroundStyle)
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: buttonCornerRadius)
+                RoundedRectangle(cornerRadius: buttonCornerRadius, style: .continuous)
                     .stroke(borderColor, lineWidth: borderWidth)
             )
         }
+        .buttonStyle(PressableButtonStyle())
+    }
+
+    private var backgroundStyle: AnyShapeStyle {
+        if case .primary = action.style {
+            return AnyShapeStyle(KeepshireTheme.actionGradient)
+        }
+        return AnyShapeStyle(backgroundColor)
     }
 
     private var foregroundColor: Color {
         switch action.style {
         case .primary: return .white
-        case .secondary, .outline, .link: return .accentColor
+        case .secondary, .outline, .link: return KeepshireTheme.accent
         case .custom(_, let foregroundColor): return foregroundColor
         }
     }
@@ -46,14 +56,14 @@ struct EmptyStateActionButton: View {
     private var backgroundColor: Color {
         switch action.style {
         case .primary: return .accentColor
-        case .secondary: return Color(.systemGray5)
+        case .secondary: return KeepshireTheme.accent.opacity(0.12)
         case .outline, .link: return .clear
         case .custom(let backgroundColor, _): return backgroundColor
         }
     }
 
     private var borderColor: Color {
-        action.style.isOutline ? .accentColor : .clear
+        action.style.isOutline ? KeepshireTheme.accent : .clear
     }
 
     private var borderWidth: CGFloat {

@@ -13,9 +13,7 @@ struct FilePreviewErrorView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 60))
-                .foregroundColor(.red)
+            KeepshireIconTile(systemName: "exclamationmark.triangle.fill", tint: .red, size: 72)
             
             Text("Failed to Load File")
                 .font(.title2)
@@ -31,10 +29,8 @@ struct FilePreviewErrorView: View {
             Button("Try Again") {
                 onRetry()
             }
-            .padding()
-            .background(KeepshireTheme.accent)
-            .foregroundColor(.white)
-            .cornerRadius(10)
+            .buttonStyle(KeepshirePrimaryButtonStyle())
+            .frame(maxWidth: 260)
         }
         .padding()
     }

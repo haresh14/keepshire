@@ -27,9 +27,12 @@ struct FolderBreadcrumbView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "house.fill").font(.caption)
-                        Text("Home").font(.caption)
+                        Text("Home").font(.system(.caption, design: .rounded, weight: .semibold))
                     }
-                        .foregroundColor(KeepshireTheme.accent)
+                    .foregroundColor(KeepshireTheme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(KeepshireTheme.accent.opacity(0.12)))
                 }
                 if let folder {
                     let breadcrumbs = folder.breadcrumbPath
@@ -150,6 +153,7 @@ struct FolderContentList: View {
                 }
             }
         }
+        .keepshireBackground(hidesScrollBackground: true)
     }
 }
 

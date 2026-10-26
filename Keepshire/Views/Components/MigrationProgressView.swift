@@ -26,6 +26,8 @@ struct MigrationProgressView: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(KeepshireBackground())
         .navigationTitle("Updating Vault")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -43,14 +45,11 @@ struct MigrationProgressView: View {
     
     private var headerSection: some View {
         VStack(spacing: 16) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 60))
-                .foregroundColor(KeepshireTheme.accent)
+            KeepshireIconTile(systemName: "lock.shield.fill", size: 68, filled: true)
                 .symbolEffect(.pulse)
             
             Text("Updating Encryption")
-                .font(.title2)
-                .fontWeight(.semibold)
+                .font(.system(.title2, design: .rounded, weight: .semibold))
                 .multilineTextAlignment(.center)
         }
     }

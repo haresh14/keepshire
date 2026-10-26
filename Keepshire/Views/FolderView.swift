@@ -30,8 +30,18 @@ struct FolderView: View {
                     Button {
                         select(nil)
                     } label: {
-                        Label("All Folders", systemImage: "folder")
+                        HStack(spacing: 12) {
+                            KeepshireIconTile(systemName: "tray.full.fill", size: 32, filled: selectedFolder == nil)
+                            Text("All Folders")
+                                .font(.system(.body, design: .rounded, weight: .medium))
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(selectedFolder == nil ? KeepshireTheme.accent : Color.primary)
+                    .listRowBackground(selectedFolder == nil ? KeepshireTheme.accent.opacity(0.12) : nil)
+                    .accessibilityLabel("All Folders")
                     .accessibilityValue(selectedFolder == nil ? "Selected" : "")
 
                     if !loginStateManager.shouldShowEmptyVault {
@@ -39,23 +49,30 @@ struct FolderView: View {
                             Button {
                                 select(item.folder)
                             } label: {
-                                Label(
-                                    item.folder.displayName,
-                                    systemImage: selectedFolder == item.folder ? "folder.fill" : "folder"
-                                )
+                                HStack(spacing: 12) {
+                                    KeepshireIconTile(systemName: "folder.fill", size: 32, filled: selectedFolder == item.folder)
+                                    Text(item.folder.displayName)
+                                        .font(.system(.body, design: .rounded, weight: .medium))
+                                        .lineLimit(1)
+                                }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.leading, CGFloat(item.depth) * 16)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(
-                                selectedFolder == item.folder ? Color.accentColor : Color.primary
+                                selectedFolder == item.folder ? KeepshireTheme.accent : Color.primary
                             )
+                            .listRowBackground(
+                                selectedFolder == item.folder ? KeepshireTheme.accent.opacity(0.12) : nil
+                            )
+                            .accessibilityLabel(item.folder.displayName)
                             .accessibilityValue(selectedFolder == item.folder ? "Selected" : "")
                         }
                     }
                 }
                 .navigationTitle("Folders")
+                .keepshireBackground(hidesScrollBackground: true)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
                 } content: {
                 FolderContentView(

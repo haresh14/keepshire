@@ -15,12 +15,23 @@ struct SettingsView: View {
 
         var systemImage: String {
             switch self {
-            case .authentication: return "key"
-            case .security: return "lock.shield"
-            case .data: return "internaldrive"
-            case .trash: return "trash"
+            case .authentication: return "key.fill"
+            case .security: return "lock.shield.fill"
+            case .data: return "internaldrive.fill"
+            case .trash: return "trash.fill"
             case .web: return "network"
-            case .about: return "info.circle"
+            case .about: return "info.circle.fill"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .authentication: return .orange
+            case .security: return .blue
+            case .data: return .gray
+            case .trash: return .red
+            case .web: return .green
+            case .about: return KeepshireTheme.accent
             }
         }
     }
@@ -97,10 +108,12 @@ struct SettingsView: View {
         if horizontalSizeClass == .regular {
             NavigationSplitView {
                 List(availableDestinations, selection: $selectedDestination) { destination in
-                    Label(destination.rawValue, systemImage: destination.systemImage)
+                    SettingsRowLabel(title: destination.rawValue, systemImage: destination.systemImage, tint: destination.tint)
+                        .font(.system(.body, design: .rounded, weight: .medium))
                         .tag(destination)
                 }
                 .navigationTitle("Settings")
+                .keepshireBackground(hidesScrollBackground: true)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
             } detail: {
                 NavigationStack {
@@ -135,17 +148,20 @@ struct SettingsView: View {
             Form {
                 authenticationSection
             }
+            .keepshireBackground(hidesScrollBackground: true)
             .navigationTitle(Destination.authentication.rawValue)
         case .security:
             Form {
                 securitySection
             }
+            .keepshireBackground(hidesScrollBackground: true)
             .navigationTitle(Destination.security.rawValue)
         case .data:
             Form {
                 dataSections(openTrash: { selectedDestination = .trash })
                 debugSection
             }
+            .keepshireBackground(hidesScrollBackground: true)
             .navigationTitle(Destination.data.rawValue)
         case .trash:
             TrashView()
@@ -157,11 +173,13 @@ struct SettingsView: View {
                     lockBehaviorDescription: lockBehaviorDescription
                 )
             }
+            .keepshireBackground(hidesScrollBackground: true)
             .navigationTitle(Destination.web.rawValue)
         case .about:
             Form {
                 aboutSection
             }
+            .keepshireBackground(hidesScrollBackground: true)
             .navigationTitle(Destination.about.rawValue)
         }
     }
@@ -169,6 +187,7 @@ struct SettingsView: View {
     private var completeSettingsForm: some View {
         Form {
             if loginStateManager.canAccessFullSettings {
+                vaultSummarySection
                 authenticationSection
                 securitySection
                 dataSections()
@@ -179,6 +198,29 @@ struct SettingsView: View {
                 debugSection
             }
             aboutSection
+        }
+        .keepshireBackground(hidesScrollBackground: true)
+    }
+
+    /// Logo, app name, and what the vault holds, at the top of iPhone Settings.
+    private var vaultSummarySection: some View {
+        Section {
+            HStack(spacing: 14) {
+                Image("AppLogo")
+                    .resizable()
+                    .frame(width: 56, height: 56)
+                    .shadow(color: KeepshireTheme.glowTeal.opacity(0.3), radius: 8, y: 4)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(AppMetadata.displayName)
+                        .font(.system(.title3, design: .rounded, weight: .bold))
+                    Text("\(storageInfo.fileCount) \(storageInfo.fileCount == 1 ? "file" : "files") · \(formatFileSize(storageInfo.usedSpace)) · Encrypted")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.vertical, 6)
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -206,12 +248,22 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("About") {
-            LabeledContent("Version", value: AppMetadata.versionDisplay)
+            LabeledContent {
+                Text(AppMetadata.versionDisplay)
+            } label: {
+                SettingsRowLabel(title: "Version", systemImage: "info.circle.fill")
+            }
             if let privacyPolicyURL = AppMetadata.privacyPolicyURL {
-                Link("Privacy Policy", destination: privacyPolicyURL)
+                Link(destination: privacyPolicyURL) {
+                    SettingsRowLabel(title: "Privacy Policy", systemImage: "hand.raised.fill", tint: .blue)
+                }
+                .foregroundColor(.primary)
             }
             if let supportURL = AppMetadata.supportURL {
-                Link("Support", destination: supportURL)
+                Link(destination: supportURL) {
+                    SettingsRowLabel(title: "Support", systemImage: "questionmark.circle.fill", tint: .green)
+                }
+                .foregroundColor(.primary)
             }
         }
     }

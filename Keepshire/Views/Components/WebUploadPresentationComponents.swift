@@ -5,19 +5,13 @@ import UIKit
 
 struct WebUploadHeaderView: View {
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "globe")
-                .font(.system(size: 60))
-                .foregroundColor(KeepshireTheme.accent)
-            Text("Web Upload")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            Text("Upload files from any device on your network")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.top)
+        KeepshireHero(
+            artwork: .symbol("network"),
+            title: "Web Upload",
+            subtitle: "Send files from a computer or tablet on the same Wi-Fi",
+            artworkSize: 68
+        )
+        .padding(.top, 8)
     }
 }
 
@@ -29,20 +23,31 @@ struct WebUploadStatusCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Circle()
-                    .fill(isRunning ? KeepshireTheme.success : Color.red)
-                    .frame(width: 12, height: 12)
-                Text(isRunning ? "Server Running" : "Server Stopped")
-                    .font(.headline)
-                    .foregroundColor(isRunning ? KeepshireTheme.success : .red)
-                    .accessibilityIdentifier("webUpload.status")
+            HStack(spacing: 12) {
+                KeepshireIconTile(
+                    systemName: isRunning ? "antenna.radiowaves.left.and.right" : "wifi.slash",
+                    tint: isRunning ? KeepshireTheme.success : .secondary,
+                    size: 40
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isRunning ? "Server Running" : "Server Stopped")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundColor(isRunning ? KeepshireTheme.success : .primary)
+                        .accessibilityIdentifier("webUpload.status")
+                    Text(isRunning ? "Waiting for a browser to connect" : "Start the server to upload from a browser")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
+                Circle()
+                    .fill(isRunning ? KeepshireTheme.success : Color(.systemGray3))
+                    .frame(width: 10, height: 10)
+                    .accessibilityHidden(true)
             }
 
             if isRunning {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Server URL:")
+                    Text("Server address")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     HStack {
@@ -51,8 +56,10 @@ struct WebUploadStatusCard: View {
                             .foregroundColor(KeepshireTheme.accent)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(KeepshireTheme.accent.opacity(0.1))
-                            .cornerRadius(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(KeepshireTheme.accent.opacity(0.1))
+                            )
                             .accessibilityIdentifier("webUpload.serverURL")
                             .accessibilityLabel("Server URL")
                         Button(action: copyURL) {
@@ -81,9 +88,7 @@ struct WebUploadStatusCard: View {
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .keepshireCard()
     }
 }
 
@@ -100,13 +105,8 @@ struct WebUploadServerControls: View {
                 VStack(spacing: 8) {
                     Button(action: {}) {
                         Label("Server Disabled", systemImage: "exclamationmark.triangle")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray)
-                            .cornerRadius(12)
                     }
+                    .buttonStyle(KeepshirePrimaryButtonStyle())
                     .disabled(true)
                     .accessibilityIdentifier("webUpload.serverDisabled")
                     .accessibilityLabel("Server disabled")
@@ -119,15 +119,12 @@ struct WebUploadServerControls: View {
                 Button(action: toggleServer) {
                     Label(
                         isRunning ? "Stop Server" : "Start Server",
-                        systemImage: isRunning ? "stop.circle" : "play.circle"
+                        systemImage: isRunning ? "stop.fill" : "play.fill"
                     )
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isRunning ? Color.red : KeepshireTheme.success)
-                    .cornerRadius(12)
                 }
+                .buttonStyle(KeepshirePrimaryButtonStyle(
+                    tint: isRunning ? AnyShapeStyle(Color.red.gradient) : AnyShapeStyle(KeepshireTheme.actionGradient)
+                ))
                 .accessibilityIdentifier("webUpload.toggleServer")
                 .accessibilityLabel(isRunning ? "Stop Server" : "Start Server")
             }
@@ -149,13 +146,8 @@ struct WebUploadServerControls: View {
     ) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon)
-                .font(.subheadline)
-                .foregroundColor(KeepshireTheme.accent)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(KeepshireTheme.accent.opacity(0.1))
-                .cornerRadius(8)
         }
+        .buttonStyle(KeepshireSecondaryButtonStyle())
         .accessibilityIdentifier(identifier)
     }
 }
@@ -267,8 +259,8 @@ struct WebUploadPairingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Pairing Code:")
-                .font(.headline)
+            Text("Pairing Code")
+                .font(.system(.headline, design: .rounded))
             Text(code.isEmpty ? "------" : code)
                 .font(.system(size: 34, weight: .semibold, design: .monospaced))
                 .kerning(6)
@@ -278,9 +270,7 @@ struct WebUploadPairingCard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .keepshireCard()
     }
 }
 
@@ -291,33 +281,33 @@ struct WebUploadExportSessionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Downloads:")
-                .font(.headline)
+            Text("Downloads")
+                .font(.system(.headline, design: .rounded))
             if let expiresAt {
                 Text("Allowed until \(expiresAt.formatted(date: .omitted, time: .shortened))")
                     .font(.subheadline)
                     .foregroundColor(KeepshireTheme.success)
                 Button("Stop Downloads", action: endSession)
+                    .buttonStyle(KeepshireSecondaryButtonStyle(tint: .red))
                     .accessibilityIdentifier("webUpload.endExportSession")
             } else {
                 Button("Allow Downloads for 10 Minutes", action: startSession)
+                    .buttonStyle(KeepshireSecondaryButtonStyle())
                     .accessibilityIdentifier("webUpload.startExportSession")
             }
             Text("Downloads stay off until you allow them. Each file gets a single-use link, and the window closes when it expires or you leave the app.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .keepshireCard()
     }
 }
 
 struct WebUploadInstructionsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("How to Upload Files:")
-                .font(.headline)
+            Text("How to Upload Files")
+                .font(.system(.headline, design: .rounded))
             VStack(alignment: .leading, spacing: 8) {
                 InstructionStep(number: "1", text: "Make sure your device is on the same WiFi network")
                 InstructionStep(number: "2", text: "Open a web browser on any device")
@@ -326,25 +316,26 @@ struct WebUploadInstructionsCard: View {
                 InstructionStep(number: "5", text: "Drag and drop files or click to browse")
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .keepshireCard()
     }
 }
 
 struct WebUploadSecurityNotice: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Label("Security Notice", systemImage: "shield.checkered")
-                .font(.headline)
+                .font(.system(.headline, design: .rounded))
                 .foregroundColor(.orange)
             Text("• The browser talks to this phone over HTTPS with a certificate created on the device\n• The browser warning is expected; there is no public certificate authority on your LAN\n• Files stay on this device after upload\n• Stop the server when you are done")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding()
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.orange.opacity(0.1))
+        )
     }
 }
 
@@ -358,9 +349,8 @@ struct InstructionStep: View {
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
-                .frame(width: 20, height: 20)
-                .background(KeepshireTheme.accent)
-                .clipShape(Circle())
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(KeepshireTheme.actionGradient))
             Text(text)
                 .font(.subheadline)
             Spacer()
@@ -380,7 +370,7 @@ struct WebUploadQRCodeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                Text("Scan QR Code").font(.title).fontWeight(.bold)
+                Text("Scan QR Code").font(.system(.title, design: .rounded, weight: .bold))
                 Text("Scan this code with your phone's camera to quickly access the upload page")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -396,12 +386,7 @@ struct WebUploadQRCodeView: View {
                     UIPasteboard.general.string = url
                     dismiss()
                 }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(KeepshireTheme.accent)
-                .cornerRadius(12)
+                .buttonStyle(KeepshirePrimaryButtonStyle())
                 Spacer()
             }
             .padding()

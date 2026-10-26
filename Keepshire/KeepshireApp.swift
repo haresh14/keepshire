@@ -14,6 +14,8 @@ struct KeepshireApp: App {
     
     init() {
         configureUITestingStateIfNeeded()
+        performFirstLaunchCleanupIfNeeded()
+        KeepshireAppearance.apply()
         _ = DiagnosticsManager.shared
         // Handle background URLSession events
         setupBackgroundURLSessionHandling()
@@ -25,6 +27,16 @@ struct KeepshireApp: App {
         }
     }
     
+    /// Runs before any view exists. iOS keeps Keychain items when the app is
+    /// deleted, so on a reinstall the old credential must be wiped before the
+    /// authentication coordinator reads it to choose the first screen.
+    private func performFirstLaunchCleanupIfNeeded() {
+        let appDataManager = dependencies.appDataManager
+        guard appDataManager.isFirstLaunch else { return }
+        VaultLog.debug("DEBUG: 🚀 First app launch detected - performing cleanup...")
+        appDataManager.performFirstLaunchCleanup()
+    }
+
     private func setupBackgroundURLSessionHandling() {
         // The background session handling is actually done in AppDelegate or SceneDelegate
         // For SwiftUI apps, we need to handle it differently
@@ -88,12 +100,6 @@ private struct KeepshireRootView: View {
                 }
             }
             .onAppear {
-                if dependencies.appDataManager.isFirstLaunch {
-                    VaultLog.debug("DEBUG: 🚀 First app launch detected - performing cleanup...")
-                    dependencies.appDataManager.performFirstLaunchCleanup()
-                } else {
-                    VaultLog.debug("DEBUG: ✅ Not first launch - no cleanup needed")
-                }
                 _ = dependencies.webServerManager
                 // Registers the notification delegate. This does not ask for permission.
                 _ = NotificationManager.shared

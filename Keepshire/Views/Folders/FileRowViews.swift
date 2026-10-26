@@ -17,7 +17,7 @@ struct SelectableFileRowView: View {
     @State private var thumbnail: UIImage?
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             if isSelectionMode {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(isSelected ? KeepshireTheme.accent : .gray)
@@ -29,9 +29,8 @@ struct SelectableFileRowView: View {
                     Image(uiImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 40, height: 40)
-                        .clipped()
-                        .cornerRadius(6)
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
                         .overlay(alignment: .topLeading) {
                             if file.isVideo {
                                 Text(file.formattedDuration)
@@ -45,10 +44,11 @@ struct SelectableFileRowView: View {
                             }
                         }
                 } else {
-                    Image(systemName: file.isImage ? "photo" : file.isVideo ? "video" : "doc")
-                        .foregroundColor(file.isImage ? .blue : file.isVideo ? .purple : .orange)
-                        .font(.title2)
-                        .frame(width: 40, height: 40)
+                    KeepshireIconTile(
+                        systemName: file.isImage ? "photo.fill" : file.isVideo ? "video.fill" : "doc.text.fill",
+                        tint: file.isImage ? .blue : file.isVideo ? .indigo : .orange,
+                        size: 44
+                    )
                         .overlay(alignment: .topLeading) {
                             if file.isVideo {
                                 Text(file.formattedDuration)
@@ -65,7 +65,7 @@ struct SelectableFileRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.fileName ?? "Unknown")
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded))
                     .lineLimit(1)
 
                 HStack {

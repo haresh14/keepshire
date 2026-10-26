@@ -13,20 +13,18 @@ struct SelectableFolderRowView: View {
     let onDelete: (() -> Void)?
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             if isSelectionMode {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(isSelected ? KeepshireTheme.accent : .gray)
                     .font(.title2)
             }
 
-            Image(systemName: "folder.fill")
-                .foregroundColor(KeepshireTheme.accent)
-                .font(.title2)
+            KeepshireIconTile(systemName: "folder.fill", size: 42)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(folder.displayName)
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded))
 
                 Text("\(folder.totalItemCount) items")
                     .font(.caption)

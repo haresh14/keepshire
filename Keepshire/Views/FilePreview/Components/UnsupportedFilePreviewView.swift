@@ -15,9 +15,7 @@ struct UnsupportedFilePreviewView: View {
     
     var body: some View {
         VStack(spacing: 30) {
-            Image(systemName: "doc.questionmark")
-                .font(.system(size: 80))
-                .foregroundColor(.gray)
+            KeepshireIconTile(systemName: "doc.questionmark.fill", tint: .gray, size: 84)
             
             VStack(spacing: 10) {
                 Text("Preview Not Available")
@@ -41,10 +39,8 @@ struct UnsupportedFilePreviewView: View {
                 Button("Open with QuickLook") {
                     onShowQuickLook()
                 }
-                .padding()
-                .background(KeepshireTheme.accent)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+                .buttonStyle(KeepshirePrimaryButtonStyle())
+                .frame(maxWidth: 280)
                 
                 // if canShareFile {
                 //     Button(action: onShareFile) {

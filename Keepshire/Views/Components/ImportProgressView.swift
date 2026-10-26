@@ -153,8 +153,10 @@ struct ImportProgressView: View {
                 }
             }
             .padding(40)
-            .background(Color.black.opacity(0.8))
-            .cornerRadius(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(KeepshireTheme.brandScrim)
+            )
         }
     }
     
@@ -193,10 +195,7 @@ struct ImportProgressView: View {
                 }
             }
         }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 2)
+        .keepshireCard()
     }
     
     @ViewBuilder

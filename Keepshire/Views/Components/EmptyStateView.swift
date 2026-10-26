@@ -24,6 +24,7 @@ struct EmptyStateView: View {
             Text(configuration.title)
                 .font(configuration.style.titleFont)
                 .fontWeight(.semibold)
+                .fontDesign(.rounded)
                 .foregroundColor(configuration.style.titleColor)
                 .multilineTextAlignment(.center)
 
@@ -59,9 +60,8 @@ struct EmptyStateView: View {
         if let customIcon = configuration.customIcon {
             customIcon
         } else if let iconName = configuration.iconName {
-            Image(systemName: iconName)
-                .font(.system(size: configuration.style.iconSize))
-                .foregroundColor(configuration.style.iconColor)
+            KeepshireIconTile(systemName: iconName, size: min(configuration.style.iconSize, 84), filled: true)
+                .shadow(color: KeepshireTheme.glowTeal.opacity(0.3), radius: 14, y: 6)
         }
     }
 

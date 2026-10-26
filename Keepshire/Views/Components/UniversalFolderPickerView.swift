@@ -87,7 +87,7 @@ struct UniversalFolderPickerView: View {
                     .padding(.horizontal)
                 }
                 .padding(.vertical, 8)
-                .background(Color(.systemGray6))
+                .background(.bar)
             }
         }
     }
@@ -101,6 +101,7 @@ struct UniversalFolderPickerView: View {
                 folderRow(folder)
             }
         }
+        .keepshireBackground(hidesScrollBackground: true)
     }
     
     private var moveHereButton: some View {
@@ -132,8 +133,11 @@ struct UniversalFolderPickerView: View {
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
-            .background(KeepshireTheme.success)
-            .cornerRadius(12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(KeepshireTheme.actionGradient)
+            )
+            .opacity(canMoveToCurrentFolder() ? 1 : 0.5)
         }
         .disabled(!canMoveToCurrentFolder())
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -146,14 +150,13 @@ struct UniversalFolderPickerView: View {
             navigationPath.append(folder)
             loadCurrentLevelFolders()
         }) {
-            HStack {
-                Image(systemName: "folder.fill")
-                    .foregroundColor(KeepshireTheme.accent)
+            HStack(spacing: 12) {
+                KeepshireIconTile(systemName: "folder.fill", size: 36)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(folder.displayName)
                         .foregroundColor(.primary)
-                        .font(.body)
+                        .font(.system(.body, design: .rounded, weight: .medium))
                     
                     Text("\(folder.totalItemCount) items")
                         .font(.caption)

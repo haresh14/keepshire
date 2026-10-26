@@ -27,20 +27,24 @@ struct ChangeAuthenticationView: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            VStack {
-                Spacer()
-                
-                VStack(spacing: 30) {
-                    if !isCurrentPasswordVerified {
-                        currentPasswordSection
-                    } else {
-                        newAuthSelectionSection
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(spacing: 30) {
+                        if !isCurrentPasswordVerified {
+                            currentPasswordSection
+                        } else {
+                            newAuthSelectionSection
+                        }
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: 520)
+                    // Centred when it fits; scrolls on small screens or large text.
+                    .frame(maxWidth: .infinity, minHeight: proxy.size.height)
                 }
-                
-                Spacer()
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .padding()
+            .background(KeepshireBackground())
             .navigationTitle("Change Authentication")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -92,31 +96,18 @@ struct ChangeAuthenticationView: View {
     }
     
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 50))
-                .foregroundColor(KeepshireTheme.accent)
-            
-            Text("Verify Current Authentication")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .multilineTextAlignment(.center)
-            
-            Text("Enter your current \(currentAuthType.isPasscode ? "passcode" : "password") to continue")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
+        KeepshireHero(
+            artwork: .symbol("lock.shield.fill"),
+            title: "Verify it's you",
+            subtitle: "Enter your current \(currentAuthType.isPasscode ? "passcode" : "password") to continue",
+            artworkSize: 64
+        )
     }
     
     private var currentPasswordInput: some View {
         VStack(spacing: 12) {
             if currentAuthType.isPasscode, let digitCount = currentAuthType.digitCount {
                 // OTP-style input for passcodes
-                Text("Enter your \(digitCount)-digit passcode")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
                 OTPStylePasscodeView(digitCount: digitCount, passcode: $currentPassword)
             } else {
                 // Password input
@@ -128,7 +119,7 @@ struct ChangeAuthenticationView: View {
                             SecureField("Current Password", text: $currentPassword)
                         }
                     }
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.plain)
                     .focused($isCurrentPasswordFocused)
                     .onSubmit {
                         verifyCurrentPassword()
@@ -139,6 +130,7 @@ struct ChangeAuthenticationView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                .keepshireFieldStyle()
             }
         }
         .onAppear {
@@ -170,30 +162,21 @@ struct ChangeAuthenticationView: View {
     }
     
     private var newAuthHeaderSection: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.shield.fill")
-                .font(.system(size: 50))
-                .foregroundColor(KeepshireTheme.success)
-            
-            Text("Choose New Authentication")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .multilineTextAlignment(.center)
-            
-            Text("Select your new authentication method")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
+        KeepshireHero(
+            artwork: .symbol("checkmark.shield.fill"),
+            title: "Choose a new lock",
+            subtitle: "Every file is re-encrypted with the new passcode or password.",
+            artworkSize: 64
+        )
     }
     
     private var authTypeSelection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             ForEach(AuthenticationType.allCases, id: \.self) { type in
                 AuthTypeCard(
                     type: type,
                     isSelected: newAuthType == type,
-                    onTap: { newAuthType = type }
+                    onTap: { withAnimation(.smooth(duration: 0.25)) { newAuthType = type } }
                 )
             }
             
@@ -207,21 +190,9 @@ struct ChangeAuthenticationView: View {
     
     private var proceedButton: some View {
         Button(action: proceedToNewAuth) {
-            HStack(spacing: 8) {
-                Image(systemName: "key.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Set New Authentication")
-                    .font(.system(size: 17, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(KeepshireTheme.accent)
-            )
+            Label("Set New Authentication", systemImage: "key.fill")
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(KeepshirePrimaryButtonStyle())
     }
     
     @ViewBuilder
