@@ -327,6 +327,34 @@ Then:
 
 To reply to a rejection, use **Resolution Center** in App Store Connect. Fix code issues with a new build (bump the build number); fix metadata issues directly and resubmit.
 
+### Answering "Guideline 2.1 – Information Needed"
+
+New developer accounts often get this instead of a review. It asks for a screen recording and written answers, not code changes. The written answers are in [`release/metadata/review_information/notes.txt`](release/metadata/review_information/notes.txt): paste them both as the reply in App Store Connect and into **App Review Information → Notes**.
+
+Record the video on a **physical iPhone on the latest iOS** (Control Center → Screen Recording; add the control in Settings → Control Center if it is missing).
+
+**Before recording.** Screen Recording Protection is on by default and covers the whole app with black while the screen is being recorded, from the first screen onwards. So prepare the app first:
+
+1. Install the build being reviewed (TestFlight), open it, and set a **6-digit passcode**.
+2. Settings → Advanced Security → turn **Screen Recording Protection** off.
+3. Leave the vault empty and force-quit Keepshire (swipe it away in the App Switcher).
+
+**The recording.** Apple requires it to start with launching the app. One continuous take of about 2–3 minutes:
+
+1. Start Screen Recording, then on the Home Screen tap Keepshire: the splash, then **Welcome back**. Enter the passcode.
+2. **Add Files** → **Photos & Videos** → pick 3–4 photos in the system picker → Add.
+3. **Folder** tab: create a folder ("…" → Add Files → Create Folder), then move a photo into it (long-press → Move).
+4. **Gallery**: open a photo, pinch to zoom, double-tap, swipe to the next photo, close.
+5. **Category**: open Photos, then All Files.
+6. **Add Files** from the Files app (any PDF), then open it.
+7. **Web Upload**: tap Start Server and show the address, pairing code and certificate fingerprint. Uploading from a laptop is optional.
+8. **Settings**: show Auto-Lock, Face ID, Change Authentication (this shows the passcode setup screens), Set Fake Password, Screenshot Protection, and Trash.
+9. Go to the Home Screen and come back after the auto-lock time: the app asks for the passcode. Unlock, then stop recording.
+
+Afterwards, turn Screen Recording Protection back on.
+
+Attach the video to the reply in App Store Connect (Resolution Center), paste the notes, then resubmit. Submit the newest processed build (for example 1.0 (2)) rather than the rejected one.
+
 ## 15. After release
 
 1. Tag the commit that produced the build:
