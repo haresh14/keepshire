@@ -1,209 +1,55 @@
 # Keepshire
 
-A local, encrypted iOS vault for photos, videos, audio, documents, and other files. Access is protected by a 4-digit passcode, 6-digit passcode, or password, with optional Face ID / Touch ID.
+A private, encrypted vault for photos, videos, audio, and documents on iPhone and iPad. No account, no cloud: everything stays on the device.
 
-Home screen and in-app name: **Keepshire**. App Store listing name: **Keepshire: Private Photo Vault**. Handle: **@keepshire**.
+App Store name: **Keepshire: Private Photo Vault** · Website: [keepshire.haresh.dev](https://keepshire.haresh.dev)
 
-There is no cloud sync. The only network feature is an optional LAN web server for uploads from other devices on the same Wi‑Fi.
+## What it does
 
-The full technical inventory (for OS upgrades and regressions) is in [docs/FEATURES.md](docs/FEATURES.md). Component relationships are in [docs/COMPONENT_GRAPH.md](docs/COMPONENT_GRAPH.md).
-
-## Requirements
-
-| | |
-|---|---|
-| Deployment target | **iOS 18.5** |
-| Devices | iPhone and iPad |
-| Language | Swift 5.0 (Xcode project setting) |
-| Dependencies | None (no SPM / CocoaPods) |
-| Bundle ID | `dev.haresh.keepshire` |
-| Test bundle IDs | `dev.haresh.keepshire.tests`, `dev.haresh.keepshire.uitests` |
-| Version | Marketing **1.0**; About reads the version and build from the bundle |
-
-The Xcode project is `Keepshire.xcodeproj`. This bundle ID is a new app: existing `com.haresh.FileVault` installs do not migrate Keychain or vault files. TestFlight is a fresh vault.
+- **Lock** with a 4-digit passcode, 6-digit passcode, or password, plus optional Face ID or Touch ID.
+- **Recover** a forgotten passcode with an optional recovery key.
+- **Encrypt** every file, thumbnail, and file name with AES-GCM.
+- **Organize** in nested folders, a gallery, and categories, with search, sort, favorites, and trash.
+- **Import** from Photos, Files, the Share sheet, or a computer's browser over Wi-Fi.
+- **View** photos, videos, audio, PDFs, and documents without leaving the vault.
+- **Protect** with blank screenshots, a screen-recording cover, shake or flip to lock, and a decoy passcode.
 
 ## Quick start
 
 1. Open `Keepshire.xcodeproj` in Xcode.
-2. Select a simulator or a signed device.
-3. Run (**⌘R**).
+2. Pick an iPhone simulator.
+3. Press **⌘R**.
 
-Face ID usage text is already set on the target (`NSFaceIDUsageDescription`). Photo library access uses `PHPickerViewController` and does not need `NSPhotoLibraryUsageDescription`.
+Requires iOS 18.5 or later. No dependencies to install. For devices, signing, and the command-line installer, see [Development](docs/DEVELOPMENT.md).
 
-The marketing site is at [keepshire.haresh.dev](https://keepshire.haresh.dev). Settings → About links to the [privacy policy](https://keepshire.haresh.dev/privacy) and [support](https://keepshire.haresh.dev/support) pages.
+Run the unit tests (serially):
 
-New to Xcode? See [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for opening the project, signing, and troubleshooting.
-
-## Install on a device from the command line
-
-[install-on-device.sh](install-on-device.sh) builds the `Keepshire` scheme (Debug) and installs it on a physical iPhone with `xcrun devicectl`. It does not launch the app; open it from the Home Screen.
-
-```sh
-./install-on-device.sh            # first paired physical iPhone (simulators are skipped)
-./install-on-device.sh <UDID>     # a specific device
+```bash
+xcodebuild -project Keepshire.xcodeproj -scheme Keepshire -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test -only-testing:KeepshireTests -parallel-testing-enabled NO
 ```
 
-List devices and their identifiers with `xcrun devicectl list devices`.
+## Documentation
 
-Before the first run:
-- Set a Team under Signing & Capabilities for both `Keepshire` and `KeepshireShare`, and sign in to your Apple ID in Xcode → Settings → Accounts. The script passes `-allowProvisioningUpdates`, so profiles are created automatically.
-- Turn on Developer Mode on the iPhone (Settings → Privacy & Security) and trust the Mac. After pairing once by cable, the device can also be reached over Wi‑Fi.
-- Run the script by hand once so any keychain or signing prompts can be answered.
-- With a free Apple ID, the installed app expires after 7 days.
+| Document | Read it to |
+|---|---|
+| [Features](docs/FEATURES.md) | Learn what the app does, screen by screen |
+| [Architecture](docs/ARCHITECTURE.md) | Understand how the code is organized and how data flows |
+| [Security model](docs/SECURITY.md) | See how files and keys are protected, and the limits |
+| [Development](docs/DEVELOPMENT.md) | Set up, build, run on a device, and change the code |
+| [Testing](docs/TESTING.md) | Run the tests and the manual release checklist |
+| [Release](docs/RELEASE.md) | Ship to TestFlight and the App Store |
+| [Decisions](docs/decisions/) | Read why key design choices were made |
 
-Build output goes to `build/DerivedData` (git-ignored).
+Planned work lives in [TODO.txt](TODO.txt).
 
-### Scheduling (weekdays at 11 AM)
-
-Use a LaunchAgent rather than cron: it runs in your login session, so code signing can reach the keychain, and a run missed while the Mac was asleep happens on wake. Save this as `~/Library/LaunchAgents/com.keepshire.install-on-device.plist`, replacing the script path and `<user>`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.keepshire.install-on-device</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/path/to/Keepshire/install-on-device.sh</string>
-    </array>
-    <key>StartCalendarInterval</key>
-    <array>
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
-    </array>
-    <key>StandardOutPath</key>
-    <string>/Users/<user>/Library/Logs/keepshire-install.log</string>
-    <key>StandardErrorPath</key>
-    <string>/Users/<user>/Library/Logs/keepshire-install.log</string>
-</dict>
-</plist>
-```
-
-Weekdays 1–5 are Monday–Friday.
-
-```sh
-# Load
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.keepshire.install-on-device.plist
-
-# Run now (test)
-launchctl kickstart gui/$(id -u)/com.keepshire.install-on-device
-
-# Check status / follow the log
-launchctl print gui/$(id -u)/com.keepshire.install-on-device
-tail -f ~/Library/Logs/keepshire-install.log
-
-# Unload (required before bootstrapping an edited plist)
-launchctl bootout gui/$(id -u)/com.keepshire.install-on-device
-```
-
-At 11:00 you must be logged in to the Mac (a locked screen is fine), and the iPhone must be reachable by cable or the same Wi‑Fi, preferably unlocked.
-
-### Verifying the schedule
-
-1. **Loaded?** `launchctl list | grep keepshire` should print `-  0  com.keepshire.install-on-device`. `-` means not running right now; `0` is the last exit code (success). No output means the agent is not loaded.
-2. **Triggers registered?** In `launchctl print gui/$(id -u)/com.keepshire.install-on-device`, `event triggers` should list five `com.apple.launchd.calendarinterval` entries with `Hour => 11`, `Minute => 0`, and `Weekday` 1–5. `runs` counts completed runs and `last exit code` should be `0`.
-3. **Installed?** `tail -20 ~/Library/Logs/keepshire-install.log` shows timestamped lines for each run, ending with `Done`.
-
-After a scheduled run, `runs` goes up by one and the log has a new entry stamped around 11:00 (or at wake time if the Mac was asleep).
-
-Troubleshooting:
-- `Bootstrap failed: 5: Input/output error`: the agent is already loaded. Confirm with `launchctl print` above, or `bootout` and `bootstrap` again.
-- `Operation not permitted` in the log: give `/bin/zsh` Full Disk Access in System Settings → Privacy & Security.
-- `does not contain a scheme named "Keepshire"`: build from `Keepshire.xcodeproj`, not a stray `Keepshire.xcworkspace` folder (which has no projects in it).
-
-## Features
-
-### Authentication and lock
-- First-launch choice: 4-digit passcode, 6-digit passcode, or password (minimum 6 characters)
-- Optional Face ID / Touch ID (falls back to the vault credential)
-- Auto-lock after backgrounding: immediately, 5s–5 min, or never (default **30 seconds**)
-- App Switcher cover so vault contents are not visible when leaving the app
-- Change authentication re-encrypts all vault files
-
-### Decoy vault
-- Optional fake passcode/password that unlocks an empty UI
-- Add files, folders, web server, and most Settings are blocked in that mode
-
-### Files and folders
-- Nested folders (create, rename, move, delete, swipe-to-delete)
-- Import photos/videos from the system picker (up to 50) and files from the Files app
-- Gallery, category browser (Favorites, Photos, Videos, Audio, Documents, Other, All Files), search on Gallery and Categories
-- Sort, multi-select, favorites, share, rename, move
-- Optional trash with restore and empty
-
-### Preview
-- Photos: pinch, pan, double-tap zoom, swipe between items
-- Videos: autoplay, play/pause, scrubber, ±15s, speed, pinch/double-tap zoom
-- Audio playback; PDF (PDFKit); other documents via QuickLook
-
-### Web upload
-- Local HTTPS server on port **8080**, URL copy, QR code, certificate fingerprint
-- The browser shows a trust warning (self-signed, expected); then enter the 6-digit pairing code shown in the app
-- Browser upload and folder management; downloads only after Face ID / vault credential opens a 10-minute export session
-- Each download uses a single-use ticket; a multi-item selection comes back as one ZIP
-- The server needs the app open; it pauses while the device is locked and tells the browser to unlock the iPhone
-
-### Extra security (Settings)
-- Screenshot blanking (vault stays on screen; Photos gets a black image) and App Switcher overlay
-- Screen recording overlay
-- Optional shake-to-lock and flip-to-lock
-
-Files in `Documents/Vault/` and `Documents/Thumbnails/` are encrypted with **AES-GCM** and stored as UUID filenames (the gallery still shows the original name). Display names, MIME types, and sizes are sealed JSON in Core Data, decrypted into memory after unlock. The key is **PBKDF2-HMAC-SHA256** of the real credential (random salt in Keychain). Vault directories and `Keepshire.sqlite` are excluded from iCloud/computer backup. Credentials and the derivation salt use Keychain `WhenUnlockedThisDeviceOnly`.
-
-## App structure
+## Repository
 
 ```
-Keepshire/
-├── KeepshireApp.swift          # App entry, first-launch cleanup, background session init
-├── ContentView.swift           # Auth gates → MainTabView
-├── Coordinators/               # Authentication and lock orchestration
-├── Dependencies/               # DependencyContainer
-├── Models/                     # Core Data (Folder, VaultItem), protocols
-├── Managers/                   # Storage, security, web, Core Data
-├── Services/                   # Shared vault import workflow
-├── ViewModels/
-├── Views/                      # Tabs: Folders, Category, Gallery, Web Upload, Settings
-├── Utilities/                  # Keychain, sharing, notification names
-docs/FEATURES.md                # Canonical feature catalog
-KeepshireTests/                # Unit tests
-KeepshireUITests/              # Launch and navigation smoke tests
+Keepshire/          App source
+KeepshireShare/     Share Extension
+KeepshireTests/     Unit tests
+KeepshireUITests/   UI tests and App Store screenshot capture
+docs/               Documentation
+release/            Release scripts, store metadata, marketing assets
+web/                Website (home, privacy, support)
 ```
-
-Five tabs after unlock: **Folder**, **Category**, **Gallery**, **Web Upload**, **Settings**.
-
-## Testing
-
-Unit tests: **⌘U** in Xcode (`KeepshireTests`). For deterministic command-line runs, disable parallel testing:
-
-```sh
-xcodebuild -project "Keepshire.xcodeproj" -scheme "Keepshire" \
-  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
-  test -only-testing:"KeepshireTests" -parallel-testing-enabled NO
-```
-
-Auth smoke test:
-1. Launch and choose 4-digit, 6-digit, or password.
-2. Unlock; optionally enable biometrics in Settings.
-3. Background the app longer than the auto-lock timeout and return — you should be locked.
-
-A broader regression list is in [docs/FEATURES.md](docs/FEATURES.md#9-upgrade-verification-checklist).
-
-## Current known gaps
-
-- Folder tab has no search field.
-- No in-app camera capture.
-
-## Need help?
-
-- Feature behavior and OS-upgrade baseline: [docs/FEATURES.md](docs/FEATURES.md)
-- Component graph: [docs/COMPONENT_GRAPH.md](docs/COMPONENT_GRAPH.md)
-- Xcode basics: [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)
-- Command-line device install and scheduling: [Install on a device from the command line](#install-on-a-device-from-the-command-line)
-- Testing checklist: [docs/TESTING_CHECKLIST.md](docs/TESTING_CHECKLIST.md)
-- App Store release (archive, upload, screenshots, listing metadata): [release.md](release.md)
-- Troubleshooting: [docs/DEVELOPER_GUIDE.md#troubleshooting](docs/DEVELOPER_GUIDE.md#troubleshooting)
