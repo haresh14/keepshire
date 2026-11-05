@@ -30,7 +30,7 @@ The website lives in [`web/`](../web/) and deploys on Vercel (root directory `we
 
 | Path | Purpose |
 |---|---|
-| `release/release.sh` | Runs unit tests, archives Release, exports an `.ipa` or uploads |
+| `release/release.sh` | Runs unit tests, archives Release, exports an `.ipa` or uploads; after an upload, tags the commit and saves the archive |
 | `release/ExportOptions.plist` | App Store export settings (automatic signing, symbols uploaded) |
 | `release/screenshots.sh` | Captures screenshots on a 6.9" iPhone and a 13" iPad simulator |
 | `release/app-preview.sh` | Records and encodes the app preview videos (needs `ffmpeg`) |
@@ -45,12 +45,12 @@ The website lives in [`web/`](../web/) and deploys on Vercel (root directory `we
 ```mermaid
 flowchart LR
     A["Pre-flight checks"] --> B["Screenshots<br/>(if UI changed)"]
-    B --> C["release.sh --upload"]
+    B --> C["release.sh --upload<br/>(also tags and saves archive)"]
     C --> D["Export compliance<br/>on the build"]
     D --> E["TestFlight pass"]
     E --> F["Version page"]
     F --> G["Submit for review"]
-    G --> H["Release, tag, monitor"]
+    G --> H["Release and monitor"]
 ```
 
 ## 1. Account and identifiers (once)
@@ -76,7 +76,7 @@ If the name is taken, pick a variant and update `release/metadata/en-US/name.txt
 
 ## 3. Pre-flight checks (every release)
 
-1. Working tree clean on `main`.
+1. On `main`, all changes committed (`release.sh` refuses to upload otherwise).
 2. Unit and UI tests pass ([TESTING.md](TESTING.md)).
 3. Manual checklist on a physical iPhone, at least: first launch, Face ID, recovery key, Photos and Files import, Share extension, video, Web Upload from a laptop, auto-lock, screenshot blanking, decoy, trash, change lock.
 4. Settings → About opens the live privacy and support pages.
@@ -127,7 +127,22 @@ Before spending on marketing, check the name against Apple's trademark list, the
 release/release.sh 1.0 1 --upload
 ```
 
-This runs the unit tests, archives both targets with the same version and build, and uploads with the Xcode Apple ID. Without `--upload`, it writes `build/release/<version>-<build>/export/Keepshire.ipa` for Transporter. `SKIP_TESTS=1` skips tests.
+This does, in order:
+
+1. Checks the working tree has no uncommitted changes and that tag `v<version>-<build>` is unused locally and on `origin`. It stops before building if either fails.
+2. Runs the unit tests (`SKIP_TESTS=1` skips them).
+3. Archives both targets with the same version and build.
+4. Uploads with the Xcode Apple ID.
+5. Tags the built commit `v<version>-<build>` (annotated) and pushes the tag to `origin`. If the push fails, it prints the command to retry; the upload stands.
+6. Copies the archive to `~/Library/Developer/Xcode/Archives/<date>/`, so the Organizer keeps its dSYMs for crash reports. `build/` is git-ignored.
+
+Without `--upload`, it writes `build/release/<version>-<build>/export/Keepshire.ipa` for Transporter. After uploading that file, tag the same build:
+
+```bash
+release/release.sh 1.0 1 --tag
+```
+
+`--tag` tags the commit that was built, even if you have committed since. A build made with uncommitted changes cannot be tagged.
 
 Without an Xcode login (CI), use an App Store Connect API key (role App Manager); keep the `.p8` out of the repo:
 
@@ -215,15 +230,7 @@ Turn Screen Recording Protection back on. Attach the video, then resubmit the ne
 
 ## 11. After release
 
-```bash
-git tag -a v1.0-1 -m "Keepshire 1.0 (1) – App Store release"
-```
-
-```bash
-git push origin v1.0-1
-```
-
-Keep the `.xcarchive` from `build/release/<version>-<build>/` (it holds the dSYMs); `build/` is git-ignored. Watch Xcode → Organizer → Crashes and Ratings and Reviews in the first week.
+`release.sh` has already tagged the build and saved its archive. Watch Xcode → Organizer → Crashes and Ratings and Reviews in the first week.
 
 ## Shipping an update
 
@@ -250,3 +257,6 @@ Keep the `.xcarchive` from `build/release/<version>-<build>/` (it holds the dSYM
 | "No staged photos were imported" | Run the whole script, not the test alone |
 | Black screenshots or previews | Screenshot or Screen Recording Protection was on |
 | Upload authentication error | Sign in again in Xcode, or use an API key |
+| "Commit or stash your changes first" | The release tag must match the built source; commit, then run again |
+| "Tag v… already exists" | That build number was already released; use a new one |
+| "Could not push v…" | The upload succeeded; run `git push origin v<version>-<build>` when online |
