@@ -7,18 +7,16 @@ final class DiagnosticsManager: NSObject, MXMetricManagerSubscriber {
 
     private let defaults: UserDefaults
 
+    /// Only the shared instance subscribes, and it lives as long as the app. MetricKit removes
+    /// a subscriber later on its own queue, so unsubscribing from `deinit` touches freed memory.
     private override convenience init() {
         self.init(defaults: .standard)
+        MXMetricManager.shared.add(self)
     }
 
     init(defaults: UserDefaults) {
         self.defaults = defaults
         super.init()
-        MXMetricManager.shared.add(self)
-    }
-
-    deinit {
-        MXMetricManager.shared.remove(self)
     }
 
     var lastDiagnosticDate: Date? {

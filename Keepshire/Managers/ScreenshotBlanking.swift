@@ -13,9 +13,13 @@ final class ScreenCaptureBlanker {
 
     func isBlanking(_ window: UIWindow) -> Bool { blankedWindow === window }
 
+    /// Only an on-screen window can be blanked. A window outside any layer tree has nowhere
+    /// to put the field back, and reparenting it anyway leaves UIKit's view and layer trees
+    /// disagreeing, which crashes when the field is freed.
     @discardableResult
     func apply(to window: UIWindow) -> Bool {
         if blankedWindow === window { return true }
+        guard let host = window.layer.superlayer else { return false }
         remove()
 
         secureField.isSecureTextEntry = true
@@ -32,11 +36,10 @@ final class ScreenCaptureBlanker {
             return false
         }
 
-        let host = window.layer.superlayer
         secureField.layer.removeFromSuperlayer()
         window.layer.removeFromSuperlayer()
         canvas.addSublayer(window.layer)
-        host?.addSublayer(secureField.layer)
+        host.addSublayer(secureField.layer)
 
         restoredSuperlayer = host
         blankedWindow = window

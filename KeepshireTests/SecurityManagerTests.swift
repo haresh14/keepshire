@@ -59,11 +59,27 @@ struct SecurityManagerTests {
         #expect(!SecurityNoticeCopy.screenshotMessage.lowercased().contains("prevent"))
     }
 
-    @Test func testBlankingMovesTheWholeWindowLayerAndPutsItBack() {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+    /// The app holds one blanker, and the window it blanks, for its whole run. Freeing a field
+    /// that has hosted a window's layer crashes UIKit on its next layer commit, which then fails
+    /// whichever test happens to be running. These tests keep both alive the same way.
+    private static var keptAlive: [AnyObject] = []
+
+    /// A window shown in the test host's scene, like the app window the blanker really gets.
+    private func makeOnScreenWindow() throws -> UIWindow {
+        let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 320, height: 640)
         window.rootViewController = UIViewController()
-        let originalSuperlayer = window.layer.superlayer
+        window.isHidden = false
+        return window
+    }
+
+    @Test func testBlankingMovesTheWholeWindowLayerAndPutsItBack() throws {
+        let window = try makeOnScreenWindow()
+        defer { window.isHidden = true }
+        let originalSuperlayer = try #require(window.layer.superlayer)
         let blanker = ScreenCaptureBlanker()
+        Self.keptAlive += [window, blanker]
 
         #expect(blanker.apply(to: window))
         #expect(blanker.isActive)
@@ -77,9 +93,11 @@ struct SecurityManagerTests {
         #expect(window.layer.superlayer === originalSuperlayer)
     }
 
-    @Test func testApplyingTwiceToTheSameWindowIsANoOp() {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+    @Test func testApplyingTwiceToTheSameWindowIsANoOp() throws {
+        let window = try makeOnScreenWindow()
+        defer { window.isHidden = true }
         let blanker = ScreenCaptureBlanker()
+        Self.keptAlive += [window, blanker]
 
         #expect(blanker.apply(to: window))
         let canvas = window.layer.superlayer
