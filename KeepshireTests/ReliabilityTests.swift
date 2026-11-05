@@ -96,7 +96,7 @@ struct ReliabilityTests {
         #expect(try manager.loadFile(vaultItem: item!) == Data("from share sheet".utf8))
     }
 
-    @Test func migrateAbortsAndKeepsOldKeyWhenABlobIsCorrupt() async throws {
+    @Test func credentialChangeSucceedsEvenWhenABlobIsCorrupt() throws {
         let storage = try IsolatedTestDependencies()
         let manager = storage.fileStorageManager
         manager.setupEncryptionKey(from: "old-pass")
@@ -115,14 +115,9 @@ struct ReliabilityTests {
             .appendingPathComponent(bad.storedBlobName ?? "")
         try Data("not-a-sealed-box".utf8).write(to: blob)
 
-        await #expect(throws: FileStorageError.migrationFailed) {
-            try await manager.migrateFilesToNewEncryptionKey(
-                oldPassword: "old-pass",
-                newPassword: "new-pass"
-            ) { _, _ in }
-        }
+        try manager.changeCredential(from: "old-pass", to: "new-pass") {}
 
-        manager.setupEncryptionKey(from: "old-pass")
+        #expect(manager.setupEncryptionKey(from: "new-pass"))
         #expect(try manager.loadFile(vaultItem: good) == Data("keep me".utf8))
     }
 }

@@ -164,26 +164,22 @@ class FileStorageManager: FileStorageManaging {
     
     // MARK: - Encryption Key Management
     
-    func setupEncryptionKey(from password: String) {
+    /// Unlocks the vault for `password`. Returns false, and leaves every stored file and
+    /// metadata blob untouched, when the vault key cannot be verified.
+    @discardableResult
+    func setupEncryptionKey(from password: String) -> Bool {
         // Cached plaintext thumbnails must never survive a credential/key transition.
         clearThumbnailCache()
-        if let record = keyDerivationStore.loadRecord() {
-            encryptionKey = try? cryptoService.key(from: password, record: record)
-        } else if vaultContainsCiphertext() {
-            encryptionKey = cryptoService.legacySHA256Key(from: password)
-            upgradeLegacySHA256KeyIfNeeded(password: password)
-        } else {
-            let record = cryptoService.makeRecord()
-            do {
-                try keyDerivationStore.saveRecord(record)
-                encryptionKey = try cryptoService.key(from: password, record: record)
-            } catch {
-                VaultLog.debug("DEBUG: Failed to store key derivation record: \(error)")
-                encryptionKey = cryptoService.legacySHA256Key(from: password)
-            }
+        guard let key = resolveVaultKey(password: password) else {
+            // Every step below rewrites or deletes stored data, so none may run on an unverified key.
+            encryptionKey = nil
+            metadataSealer.key = nil
+            VaultLog.error("Vault key unavailable; stored files were left untouched")
+            return false
         }
+        encryptionKey = key
         // Metadata must be readable before the on-disk migrations inspect stored names.
-        metadataSealer.key = encryptionKey
+        metadataSealer.key = key
         metadataSealer.revealLazily(in: coreDataManager.context)
         if metadataSealer.sealLegacyPlaintext(in: coreDataManager.context) {
             coreDataManager.persistChanges()
@@ -191,6 +187,91 @@ class FileStorageManager: FileStorageManaging {
         migrateOnDiskNamesToUUID()
         encryptPlaintextThumbnails()
         removeOrphanedFiles()
+        return true
+    }
+
+    /// Files and metadata are sealed with one random vault key that never changes. The Keychain
+    /// keeps it wrapped by the user's credential, so changing the credential re-wraps 32 bytes
+    /// and never rewrites a file.
+    private func resolveVaultKey(password: String) -> SymmetricKey? {
+        let material: StoredVaultKeyMaterial?
+        do {
+            material = try keyDerivationStore.loadMaterial()
+        } catch {
+            // Unreadable is not absent: minting a fresh key here would orphan the whole vault.
+            VaultLog.error("Could not read vault key material: \(error)")
+            return nil
+        }
+
+        switch material {
+        case .envelope(let envelope):
+            return openEnvelope(envelope, password: password)?.key
+        case .derivationRecord(let record):
+            guard let key = try? cryptoService.key(from: password, record: record) else { return nil }
+            return adoptExistingKey(key, password: password)
+        case nil:
+            if vaultContainsCiphertext() || metadataSealer.hasSealedMetadata(in: coreDataManager.context) {
+                return adoptExistingKey(cryptoService.legacySHA256Key(from: password), password: password)
+            }
+            let key = cryptoService.makeVaultKey()
+            do {
+                try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [cryptoService.wrap(key, password: password)]))
+            } catch {
+                // A key that is not stored would be lost on relaunch with everything sealed under it.
+                VaultLog.error("Could not store a new vault key: \(error)")
+                return nil
+            }
+            return key
+        }
+    }
+
+    /// Opens the wrap that matches `password` and drops any other. A second wrap means a
+    /// credential change was interrupted; the credential the Keychain holds decides which side won.
+    private func openEnvelope(_ envelope: VaultKeyEnvelope, password: String) -> (key: SymmetricKey, wrap: VaultKeyWrap)? {
+        for wrap in envelope.wraps {
+            guard let key = cryptoService.unwrap(wrap, password: password) else { continue }
+            if envelope.wraps.count > 1 {
+                try? keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [wrap]))
+            }
+            return (key, wrap)
+        }
+        return nil
+    }
+
+    /// Earlier builds sealed data with a passcode-derived key. That key becomes the vault key as
+    /// is, so the upgrade wraps it instead of rewriting files. A key that cannot open what is
+    /// already stored is refused, never wrapped.
+    private func adoptExistingKey(_ key: SymmetricKey, password: String) -> SymmetricKey? {
+        guard keyOpensVault(key) else {
+            VaultLog.error("Derived key does not open the stored vault")
+            return nil
+        }
+        // If this write fails the old record stays, and the next unlock simply tries again.
+        if let wrap = try? cryptoService.wrap(key, password: password) {
+            try? keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [wrap]))
+        }
+        return key
+    }
+
+    /// True when `key` opens a sample of stored metadata or files, or when nothing is stored yet.
+    /// One readable sample is enough, so a single damaged file cannot lock the user out.
+    private func keyOpensVault(_ key: SymmetricKey) -> Bool {
+        if let opens = metadataSealer.canOpenSealedMetadata(with: key, in: coreDataManager.context) {
+            return opens
+        }
+        let samples = storedBlobNames().prefix(3)
+        guard !samples.isEmpty else { return true }
+        return samples.contains { encryptedFileStore.canOpen(fileName: $0, key: key) }
+    }
+
+    private func storedBlobNames() -> [String] {
+        let urls = (try? fileManager.contentsOfDirectory(
+            at: vaultDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        return urls.map(\.lastPathComponent).filter {
+            !$0.hasPrefix(".") && !$0.hasSuffix(".tmp") && !$0.hasSuffix(".migrating")
+        }
     }
 
     @discardableResult
@@ -238,174 +319,50 @@ class FileStorageManager: FileStorageManaging {
         return imported
     }
     
-    /// Re-encrypt all vault files with a new encryption key
-    /// This is called when the user changes their passcode
-    func migrateFilesToNewEncryptionKey(oldPassword: String, newPassword: String, progress: @escaping (Int, Int) -> Void) async throws {
-        VaultLog.debug("DEBUG: Starting file migration from old key to new key")
-        
-        let oldKey = deriveKey(for: oldPassword)
-        // A wrong old key would leave every file and its sealed metadata unreadable, so refuse
-        // before touching anything unless it is the key the vault is unlocked with right now.
-        if let encryptionKey, !encryptionKey.matches(oldKey) {
-            throw FileStorageError.migrationFailed
+    /// Re-wraps the vault key for `newPassword`; no file or metadata blob is rewritten, so a
+    /// failure at any point leaves the vault exactly as readable as before.
+    ///
+    /// `commit` stores the new credential. The envelope holds both wraps until it returns, so
+    /// whichever credential the Keychain holds after a crash or error still opens the vault.
+    func changeCredential(from oldPassword: String, to newPassword: String, commit: () throws -> Void) throws {
+        let (vaultKey, oldWrap) = try currentWrap(for: oldPassword)
+        if let encryptionKey, !encryptionKey.matches(vaultKey) {
+            throw FileStorageError.credentialChangeFailed
         }
-        let newRecord = cryptoService.makeRecord()
-        let newKey = try cryptoService.key(from: newPassword, record: newRecord)
-        
-        // Get all vault items
-        let allItems = coreDataManager.fetchAllVaultItems()
-        let totalItems = allItems.count
-        
-        VaultLog.debug("DEBUG: Found \(totalItems) items to migrate")
-
-        var stagedNames: [String] = []
-        var didCommit = false
-        defer {
-            if !didCommit {
-                for name in stagedNames {
-                    try? fileManager.removeItem(at: vaultDirectory.appendingPathComponent(name))
-                    try? fileManager.removeItem(at: thumbnailsDirectory.appendingPathComponent(name))
-                }
-            }
+        let newWrap = try cryptoService.wrap(vaultKey, password: newPassword)
+        guard cryptoService.unwrap(newWrap, password: newPassword)?.matches(vaultKey) == true else {
+            throw FileStorageError.credentialChangeFailed
         }
 
         do {
-            for (index, item) in allItems.enumerated() {
-                stagedNames.append(contentsOf: try stageReencryptedCopies(item, oldKey: oldKey, newKey: newKey))
-                await MainActor.run {
-                    progress(index + 1, totalItems)
-                }
-                try await Task.sleep(nanoseconds: 10_000_000)
+            try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [newWrap, oldWrap]))
+            guard case .envelope(let saved)? = try keyDerivationStore.loadMaterial(),
+                  saved.wraps.contains(newWrap) else {
+                throw FileStorageError.credentialChangeFailed
             }
-
-            try commitStagedCopies(for: allItems)
-            didCommit = true
+            try commit()
         } catch {
-            throw FileStorageError.migrationFailed
+            // Both wraps may still be stored; the next unlock keeps only the one matching the Keychain.
+            VaultLog.error("Credential change failed before it was committed: \(error)")
+            throw FileStorageError.credentialChangeFailed
         }
 
-        VaultLog.debug("DEBUG: Migration completed successfully")
-
-        try keyDerivationStore.saveRecord(newRecord)
-        encryptionKey = newKey
-        metadataSealer.reencryptAll(
-            items: coreDataManager.fetchAllVaultItems(),
-            folders: coreDataManager.fetchAllFolders(),
-            oldKey: oldKey,
-            newKey: newKey
-        )
-        try coreDataManager.save()
-        
-        VaultLog.debug("DEBUG: File migration completed successfully")
+        // The new credential is stored. Dropping the old wrap is cleanup; if it fails, the next unlock does it.
+        try? keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [newWrap]))
     }
-    
-    private func stageReencryptedCopies(
-        _ vaultItem: VaultItem,
-        oldKey: SymmetricKey,
-        newKey: SymmetricKey
-    ) throws -> [String] {
-        // A row whose blob is already gone has nothing to re-encrypt; failing here would
-        // abort the whole vault after the new credential is already saved.
-        guard let sourceName = existingVaultFileName(for: vaultItem) else {
-            return []
-        }
-        if sourceName.hasPrefix(".") || sourceName == ".DS_Store" {
-            return []
-        }
 
-        var staged: [String] = []
-        let destinationName = vaultItem.storedBlobName ?? sourceName
-        let stagedBlob = destinationName + ".migrating"
-        let plaintext = try encryptedFileStore.read(fileName: sourceName, key: oldKey)
-        try encryptedFileStore.write(plaintext, fileName: stagedBlob, key: newKey)
-        staged.append(stagedBlob)
-
-        if let destName = vaultItem.storedThumbnailName ?? vaultItem.thumbnailFileName,
-           encryptedThumbnailStore.exists(fileName: destName)
-            || vaultItem.storedThumbnailCandidates.contains(where: { encryptedThumbnailStore.exists(fileName: $0) }) {
-            let stagedThumb = destName + ".migrating"
-            // Thumbnails are a cache; an unreadable one must not block re-encrypting the file itself.
-            if (try? stageThumbnail(vaultItem, destName: destName, stagedName: stagedThumb, oldKey: oldKey, newKey: newKey)) != nil,
-               encryptedThumbnailStore.exists(fileName: stagedThumb) {
-                staged.append(stagedThumb)
+    private func currentWrap(for password: String) throws -> (SymmetricKey, VaultKeyWrap) {
+        switch try keyDerivationStore.loadMaterial() {
+        case .envelope(let envelope):
+            guard let opened = openEnvelope(envelope, password: password) else {
+                throw FileStorageError.credentialChangeFailed
             }
+            return (opened.key, opened.wrap)
+        case .derivationRecord, nil:
+            // Not upgraded yet: the key this session unlocked with was verified against stored data.
+            guard let encryptionKey else { throw FileStorageError.credentialChangeFailed }
+            return (encryptionKey, try cryptoService.wrap(encryptionKey, password: password))
         }
-        return staged
-    }
-
-    private func stageThumbnail(
-        _ vaultItem: VaultItem,
-        destName: String,
-        stagedName: String,
-        oldKey: SymmetricKey,
-        newKey: SymmetricKey
-    ) throws {
-        var sourceName = destName
-        if !encryptedThumbnailStore.exists(fileName: destName) {
-            sourceName = vaultItem.storedThumbnailCandidates.first { encryptedThumbnailStore.exists(fileName: $0) } ?? destName
-        }
-        guard encryptedThumbnailStore.exists(fileName: sourceName) else { return }
-        let data = try Data(contentsOf: thumbnailsDirectory.appendingPathComponent(sourceName))
-        let jpeg: Data
-        if let decrypted = try? cryptoService.decrypt(data, using: oldKey) {
-            jpeg = decrypted
-        } else if isJPEGData(data) {
-            jpeg = data
-        } else {
-            throw FileStorageError.migrationFailed
-        }
-        try encryptedThumbnailStore.write(jpeg, fileName: stagedName, key: newKey)
-    }
-
-    private func commitStagedCopies(for items: [VaultItem]) throws {
-        for item in items {
-            let sourceName = existingVaultFileName(for: item)
-            guard let dest = item.storedBlobName ?? sourceName else { continue }
-            let stagedBlob = dest + ".migrating"
-            if encryptedFileStore.exists(fileName: stagedBlob) {
-                if dest != stagedBlob, encryptedFileStore.exists(fileName: dest) {
-                    try fileManager.removeItem(at: encryptedFileStore.url(for: dest))
-                }
-                try encryptedFileStore.move(from: stagedBlob, to: dest)
-                if let sourceName, sourceName != dest, encryptedFileStore.exists(fileName: sourceName) {
-                    try? fileManager.removeItem(at: encryptedFileStore.url(for: sourceName))
-                }
-            }
-            if let thumb = item.storedThumbnailName ?? item.thumbnailFileName {
-                let stagedThumb = thumb + ".migrating"
-                if encryptedThumbnailStore.exists(fileName: stagedThumb) {
-                    if encryptedThumbnailStore.exists(fileName: thumb) {
-                        try fileManager.removeItem(at: encryptedThumbnailStore.url(for: thumb))
-                    }
-                    try encryptedThumbnailStore.move(from: stagedThumb, to: thumb)
-                }
-            }
-        }
-    }
-
-    private func reencryptVaultItem(_ vaultItem: VaultItem, oldKey: SymmetricKey, newKey: SymmetricKey) throws {
-        guard let sourceName = existingVaultFileName(for: vaultItem) else {
-            throw FileStorageError.migrationFailed
-        }
-
-        if sourceName.hasPrefix(".") || sourceName == ".DS_Store" {
-            return
-        }
-
-        let destinationName = vaultItem.storedBlobName ?? sourceName
-        try encryptedFileStore.reencrypt(fileName: sourceName, oldKey: oldKey, newKey: newKey)
-        if destinationName != sourceName {
-            try encryptedFileStore.move(from: sourceName, to: destinationName)
-        }
-        try reencryptThumbnail(vaultItem, oldKey: oldKey, newKey: newKey)
-    }
-
-    private func deriveKey(for password: String) -> SymmetricKey {
-        if let record = keyDerivationStore.loadRecord(),
-           let key = try? cryptoService.key(from: password, record: record) {
-            return key
-        }
-        return cryptoService.legacySHA256Key(from: password)
     }
 
     private func vaultContainsCiphertext() -> Bool {
@@ -414,62 +371,6 @@ class FileStorageManager: FileStorageManaging {
             includingPropertiesForKeys: nil
         )) ?? []
         return urls.contains { !$0.lastPathComponent.hasPrefix(".") }
-    }
-
-    private func upgradeLegacySHA256KeyIfNeeded(password: String) {
-        let oldKey = cryptoService.legacySHA256Key(from: password)
-        let record = cryptoService.makeRecord()
-        guard let newKey = try? cryptoService.key(from: password, record: record) else { return }
-
-        for item in coreDataManager.fetchAllVaultItems() {
-            try? reencryptVaultItem(item, oldKey: oldKey, newKey: newKey)
-        }
-
-        do {
-            try keyDerivationStore.saveRecord(record)
-            encryptionKey = newKey
-            metadataSealer.key = newKey
-            metadataSealer.reencryptAll(
-                items: coreDataManager.fetchAllVaultItems(),
-                folders: coreDataManager.fetchAllFolders(),
-                oldKey: oldKey,
-                newKey: newKey
-            )
-            VaultLog.debug("DEBUG: Upgraded vault key derivation to PBKDF2")
-        } catch {
-            VaultLog.debug("DEBUG: Failed to save PBKDF2 derivation record: \(error)")
-        }
-    }
-
-    private func reencryptThumbnail(_ vaultItem: VaultItem, oldKey: SymmetricKey, newKey: SymmetricKey) throws {
-        guard let destName = vaultItem.storedThumbnailName ?? vaultItem.thumbnailFileName else { return }
-        let destURL = thumbnailsDirectory.appendingPathComponent(destName)
-        var sourceURL = destURL
-        if !fileManager.fileExists(atPath: destURL.path) {
-            for name in vaultItem.storedThumbnailCandidates where name != destName {
-                let candidate = thumbnailsDirectory.appendingPathComponent(name)
-                if fileManager.fileExists(atPath: candidate.path) {
-                    sourceURL = candidate
-                    break
-                }
-            }
-        }
-        guard fileManager.fileExists(atPath: sourceURL.path),
-              let data = try? Data(contentsOf: sourceURL) else { return }
-
-        let jpeg: Data
-        if let decrypted = try? cryptoService.decrypt(data, using: oldKey) {
-            jpeg = decrypted
-        } else if isJPEGData(data) {
-            jpeg = data
-        } else {
-            throw FileStorageError.migrationFailed
-        }
-
-        try encryptedThumbnailStore.write(jpeg, fileName: destName, key: newKey)
-        if sourceURL != destURL {
-            try? fileManager.removeItem(at: sourceURL)
-        }
     }
 
     private func existingVaultFileName(for item: VaultItem) -> String? {
@@ -1148,7 +1049,7 @@ enum FileStorageError: LocalizedError, Equatable {
     case fileAlreadyExists
     case fileTooLarge
     case saveFailed
-    case migrationFailed
+    case credentialChangeFailed
 
     var errorDescription: String? {
         switch self {
@@ -1170,8 +1071,8 @@ enum FileStorageError: LocalizedError, Equatable {
             return "This file is larger than 2 GB and cannot be imported."
         case .saveFailed:
             return "Keepshire could not save this file."
-        case .migrationFailed:
-            return "Keepshire could not re-encrypt every file. The previous passcode is still in use."
+        case .credentialChangeFailed:
+            return "Keepshire could not change the lock. Your previous passcode still opens the vault."
         }
     }
 } 

@@ -146,20 +146,30 @@ final class VaultMetadataSealer {
         return (try? context.fetch(request)) ?? []
     }
 
-    func reencryptAll(items: [VaultItem], folders: [Folder], oldKey: SymmetricKey, newKey: SymmetricKey) {
-        for item in items {
-            if !reveal(item, key: oldKey, markDirty: false) {
-                reveal(item, key: newKey, markDirty: false)
-            }
-            persist(item, key: newKey)
+    func hasSealedMetadata(in context: NSManagedObjectContext) -> Bool {
+        !sealedSamples(in: context, limit: 1).isEmpty
+    }
+
+    /// Whether `key` opens any of a few sealed blobs, or nil when nothing is sealed yet.
+    /// Several samples keep one damaged row from rejecting the right key.
+    func canOpenSealedMetadata(with key: SymmetricKey, in context: NSManagedObjectContext) -> Bool? {
+        let samples = sealedSamples(in: context, limit: 3)
+        guard !samples.isEmpty else { return nil }
+        return samples.contains { (try? cryptoService.decrypt($0, using: key)) != nil }
+    }
+
+    private func sealedSamples(in context: NSManagedObjectContext, limit: Int) -> [Data] {
+        var samples: [Data] = []
+        for entity in ["VaultItem", "Folder"] where samples.count < limit {
+            let request = NSFetchRequest<NSDictionary>(entityName: entity)
+            request.resultType = .dictionaryResultType
+            request.propertiesToFetch = ["sealedMetadata"]
+            request.predicate = NSPredicate(format: "sealedMetadata != nil")
+            request.fetchLimit = limit - samples.count
+            let rows = (try? context.fetch(request)) ?? []
+            samples += rows.compactMap { $0["sealedMetadata"] as? Data }
         }
-        for folder in folders {
-            if !reveal(folder, key: oldKey, markDirty: false) {
-                reveal(folder, key: newKey, markDirty: false)
-            }
-            persist(folder, key: newKey)
-        }
-        key = newKey
+        return samples
     }
 
     private func persist(_ item: VaultItem, key: SymmetricKey) {

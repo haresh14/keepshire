@@ -12,12 +12,21 @@ struct PasscodeSetupView: View {
     let onPasscodeSet: () -> Void
     let onCancel: (() -> Void)?
     let isFakePasswordSetup: Bool
+    /// Replaces the plain Keychain write when the credential guards an existing vault key.
+    let saveCredential: ((String) throws -> Void)?
     
-    init(authType: AuthenticationType, onPasscodeSet: @escaping () -> Void, onCancel: (() -> Void)? = nil, isFakePasswordSetup: Bool = false) {
+    init(
+        authType: AuthenticationType,
+        onPasscodeSet: @escaping () -> Void,
+        onCancel: (() -> Void)? = nil,
+        isFakePasswordSetup: Bool = false,
+        saveCredential: ((String) throws -> Void)? = nil
+    ) {
         self.authType = authType
         self.onPasscodeSet = onPasscodeSet
         self.onCancel = onCancel
         self.isFakePasswordSetup = isFakePasswordSetup
+        self.saveCredential = saveCredential
     }
     
     @State private var passcode: String = ""
@@ -192,8 +201,12 @@ struct PasscodeSetupView: View {
         } else {
             // Save regular passcode and auth type
             do {
-                try KeychainManager.shared.savePassword(passcode)
-                KeychainManager.shared.setAuthenticationType(authType)
+                if let saveCredential {
+                    try saveCredential(passcode)
+                } else {
+                    try KeychainManager.shared.savePassword(passcode)
+                    KeychainManager.shared.setAuthenticationType(authType)
+                }
                 onPasscodeSet()
             } catch {
                 VaultLog.debug("ERROR: Failed to save passcode: \(error)")

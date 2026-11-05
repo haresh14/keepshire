@@ -9,6 +9,7 @@ import Testing
 import Foundation
 import UIKit
 import CoreData
+import Security
 @testable import Keepshire
 
 @MainActor
@@ -159,74 +160,175 @@ struct FileStorageManagerTests {
         #expect(try manager.loadFile(vaultItem: item) == data)
     }
 
-    @Test func testEncryptionKeyMigrationPreservesDataAndProgress() async throws {
+    private func vaultBytes(_ storage: IsolatedTestDependencies, _ name: String?, in folder: String = "Vault") throws -> Data {
+        try Data(contentsOf: storage.rootURL.appendingPathComponent(folder).appendingPathComponent(name ?? ""))
+    }
+
+    @Test func testCredentialChangeRewrapsKeyWithoutTouchingFiles() async throws {
         let storage = try makeStorage()
         let manager = storage.fileStorageManager
-        let data = Data("migration payload".utf8)
-        manager.setupEncryptionKey(from: "old-passcode")
-        let item = try manager.saveFile(
-            data: data,
-            fileName: "migration.txt",
-            fileType: "text/plain"
+        let data = Data("change payload".utf8)
+        #expect(manager.setupEncryptionKey(from: "old-passcode"))
+        let item = try manager.saveFile(data: data, fileName: "change.txt", fileType: "text/plain")
+        let image = try manager.saveFile(
+            data: createTestImage().pngData()!,
+            fileName: "change.png",
+            fileType: "image/png"
         )
-        var progressValues: [(Int, Int)] = []
+        let blobBefore = try vaultBytes(storage, item.storedBlobName)
+        let thumbBefore = try vaultBytes(storage, image.storedThumbnailName, in: "Thumbnails")
 
-        try await manager.migrateFilesToNewEncryptionKey(
-            oldPassword: "old-passcode",
-            newPassword: "new-passcode"
-        ) { completed, total in
-            progressValues.append((completed, total))
+        try manager.changeCredential(from: "old-passcode", to: "new-passcode") {
+            try storage.keychainManager.savePassword("new-passcode")
         }
 
-        #expect(progressValues.count == 1)
-        #expect(progressValues.first?.0 == 1)
-        #expect(progressValues.first?.1 == 1)
+        #expect(try vaultBytes(storage, item.storedBlobName) == blobBefore)
+        #expect(try vaultBytes(storage, image.storedThumbnailName, in: "Thumbnails") == thumbBefore)
+        #expect(try storage.keychainManager.getPassword() == "new-passcode")
+
+        #expect(manager.setupEncryptionKey(from: "new-passcode"))
         #expect(try manager.loadFile(vaultItem: item) == data)
-        manager.setupEncryptionKey(from: "old-passcode")
-        #expect(throws: Error.self) {
-            try manager.loadFile(vaultItem: item)
-        }
+        #expect(item.fileName == "change.txt")
+        #expect(item.fileSize == Int64(data.count))
+        #expect(UIImage(data: manager.loadThumbnail(for: image) ?? Data()) != nil)
+
+        #expect(!manager.setupEncryptionKey(from: "old-passcode"))
+        #expect(throws: Error.self) { try manager.loadFile(vaultItem: item) }
+        #expect(manager.setupEncryptionKey(from: "new-passcode"))
+        #expect(try manager.loadFile(vaultItem: item) == data)
     }
 
-    @Test func testEncryptionKeyMigrationSurvivesMissingBlobAndKeepsMetadata() async throws {
+    @Test func testFailedCredentialCommitKeepsOldCredentialWorking() async throws {
         let storage = try makeStorage()
         let manager = storage.fileStorageManager
-        let data = Data("kept payload".utf8)
+        let data = Data("still mine".utf8)
         manager.setupEncryptionKey(from: "old-passcode")
-        let kept = try manager.saveFile(data: data, fileName: "kept.txt", fileType: "text/plain")
-        let orphan = try manager.saveFile(data: Data("gone".utf8), fileName: "gone.txt", fileType: "text/plain")
-        try FileManager.default.removeItem(at: storage.rootURL
-            .appendingPathComponent("Vault")
-            .appendingPathComponent(orphan.storedBlobName ?? ""))
+        let item = try manager.saveFile(data: data, fileName: "mine.txt", fileType: "text/plain")
 
-        try await manager.migrateFilesToNewEncryptionKey(
-            oldPassword: "old-passcode",
-            newPassword: "new-passcode"
-        ) { _, _ in }
+        #expect(throws: FileStorageError.credentialChangeFailed) {
+            try manager.changeCredential(from: "old-passcode", to: "new-passcode") {
+                throw KeychainError.unknown(errSecIO)
+            }
+        }
 
-        manager.setupEncryptionKey(from: "new-passcode")
-        #expect(try manager.loadFile(vaultItem: kept) == data)
-        #expect(kept.fileName == "kept.txt")
-        #expect(kept.fileSize == Int64(data.count))
+        #expect(manager.setupEncryptionKey(from: "old-passcode"))
+        #expect(try manager.loadFile(vaultItem: item) == data)
+        #expect(item.fileSize == Int64(data.count))
+        // Unlocking with the stored credential settles the envelope on it.
+        #expect(!manager.setupEncryptionKey(from: "new-passcode"))
     }
 
-    @Test func testEncryptionKeyMigrationRejectsWrongOldPasswordWithoutTouchingFiles() async throws {
+    @Test func testInterruptedCredentialChangeOpensWithTheCredentialThatWasStored() async throws {
+        let storage = try makeStorage()
+        let manager = storage.fileStorageManager
+        let data = Data("crash window".utf8)
+        manager.setupEncryptionKey(from: "old-passcode")
+        let item = try manager.saveFile(data: data, fileName: "crash.txt", fileType: "text/plain")
+
+        // Same Keychain state as a crash right after the new credential was written.
+        _ = try? manager.changeCredential(from: "old-passcode", to: "new-passcode") {
+            try storage.keychainManager.savePassword("new-passcode")
+            throw KeychainError.unknown(errSecIO)
+        }
+
+        #expect(manager.setupEncryptionKey(from: "new-passcode"))
+        #expect(try manager.loadFile(vaultItem: item) == data)
+        #expect(!manager.setupEncryptionKey(from: "old-passcode"))
+    }
+
+    @Test func testWrongOldPasswordIsRefusedAndNothingChanges() async throws {
         let storage = try makeStorage()
         let manager = storage.fileStorageManager
         let data = Data("untouched".utf8)
         manager.setupEncryptionKey(from: "old-passcode")
         let item = try manager.saveFile(data: data, fileName: "untouched.txt", fileType: "text/plain")
+        var committed = false
 
-        await #expect(throws: FileStorageError.self) {
-            try await manager.migrateFilesToNewEncryptionKey(
-                oldPassword: "old-passcode ",
-                newPassword: "new-passcode"
-            ) { _, _ in }
+        #expect(throws: FileStorageError.credentialChangeFailed) {
+            try manager.changeCredential(from: "old-passcode ", to: "new-passcode") { committed = true }
         }
 
-        manager.setupEncryptionKey(from: "old-passcode")
+        #expect(!committed)
+        #expect(manager.setupEncryptionKey(from: "old-passcode"))
         #expect(try manager.loadFile(vaultItem: item) == data)
-        #expect(item.fileSize == Int64(data.count))
+        #expect(!manager.setupEncryptionKey(from: "new-passcode"))
+    }
+
+    @Test func testUnreadableKeychainNeverReplacesTheVaultKey() async throws {
+        let storage = try makeStorage()
+        let keyStore = FlakyVaultKeyStore()
+        let root = storage.rootURL.appendingPathComponent("Flaky")
+        let manager = FileStorageManager(
+            documentsDirectory: root,
+            coreDataManager: storage.coreDataManager,
+            keyDerivationStore: keyStore
+        )
+        let data = Data("survives a locked keychain".utf8)
+        #expect(manager.setupEncryptionKey(from: "1234"))
+        let item = try manager.saveFile(data: data, fileName: "locked.txt", fileType: "text/plain")
+        let stored = try keyStore.loadMaterial()
+        let blob = try Data(contentsOf: root.appendingPathComponent("Vault").appendingPathComponent(item.storedBlobName ?? ""))
+
+        keyStore.failReads = true
+        #expect(!manager.setupEncryptionKey(from: "1234"))
+        #expect(throws: Error.self) { try manager.loadFile(vaultItem: item) }
+
+        keyStore.failReads = false
+        #expect(try keyStore.loadMaterial() == stored)
+        #expect(try Data(contentsOf: root.appendingPathComponent("Vault").appendingPathComponent(item.storedBlobName ?? "")) == blob)
+        #expect(manager.setupEncryptionKey(from: "1234"))
+        #expect(try manager.loadFile(vaultItem: item) == data)
+    }
+
+    @Test func testDerivedKeyThatCannotOpenTheVaultIsNeverWrapped() async throws {
+        let storage = try makeStorage()
+        let manager = storage.fileStorageManager
+        let crypto = VaultCryptoService()
+        let realRecord = VaultKeyDerivationRecord.makeCurrent()
+        let staleRecord = VaultKeyDerivationRecord.makeCurrent()
+        let vaultURL = storage.rootURL.appendingPathComponent("Vault")
+        let payload = Data("sealed under the real record".utf8)
+        try EncryptedFileStore(fileManager: .default, vaultDirectory: vaultURL)
+            .write(payload, fileName: "real.bin", key: crypto.key(from: "1234", record: realRecord))
+        try storage.keychainManager.saveKeyDerivationRecord(staleRecord)
+
+        #expect(!manager.setupEncryptionKey(from: "1234"))
+        #expect(storage.keychainManager.loadKeyDerivationRecord() == staleRecord)
+        #expect(FileManager.default.fileExists(atPath: vaultURL.appendingPathComponent("real.bin").path))
+    }
+
+    @Test func testPBKDF2RecordVaultUpgradesToEnvelopeWithoutRewritingFiles() async throws {
+        let storage = try makeStorage()
+        let manager = storage.fileStorageManager
+        let crypto = VaultCryptoService()
+        let record = VaultKeyDerivationRecord.makeCurrent()
+        let key = try crypto.key(from: "1234", record: record)
+        let vaultURL = storage.rootURL.appendingPathComponent("Vault")
+        let payload = Data("pre-envelope".utf8)
+        let item = try storage.coreDataManager.createVaultItem(
+            fileName: "old.txt",
+            fileType: "text/plain",
+            fileSize: Int64(payload.count)
+        )
+        try EncryptedFileStore(fileManager: .default, vaultDirectory: vaultURL)
+            .write(payload, fileName: item.storedBlobName ?? "", key: key)
+        try storage.keychainManager.saveKeyDerivationRecord(record)
+        let blob = try vaultBytes(storage, item.storedBlobName)
+
+        #expect(manager.setupEncryptionKey(from: "1234"))
+
+        let material = try KeychainVaultKeyDerivationStore(keychain: storage.keychainManager).loadMaterial()
+        guard case .envelope(let envelope)? = material else {
+            Issue.record("Expected the derivation record to be replaced by an envelope")
+            return
+        }
+        #expect(envelope.wraps.count == 1)
+        #expect(try vaultBytes(storage, item.storedBlobName) == blob)
+        #expect(try manager.loadFile(vaultItem: item) == payload)
+
+        try manager.changeCredential(from: "1234", to: "5678") {}
+        #expect(manager.setupEncryptionKey(from: "5678"))
+        #expect(try manager.loadFile(vaultItem: item) == payload)
     }
 
     @Test func testLegacySHA256VaultUpgradesToPBKDF2() async throws {
@@ -250,7 +352,10 @@ struct FileStorageManagerTests {
 
         manager.setupEncryptionKey(from: password)
 
-        #expect(storage.keychainManager.loadKeyDerivationRecord() != nil)
+        guard case .envelope? = try KeychainVaultKeyDerivationStore(keychain: storage.keychainManager).loadMaterial() else {
+            Issue.record("Expected the legacy key to be wrapped in an envelope")
+            return
+        }
         #expect(item.fileName == "legacy.txt")
         #expect(try manager.loadFile(vaultItem: item) == payload)
         #expect(!FileManager.default.fileExists(atPath: vaultURL.appendingPathComponent("legacy.txt").path))
@@ -406,34 +511,6 @@ struct FileStorageManagerTests {
 
         manager.setupEncryptionKey(from: "thumb-correct")
         #expect(UIImage(data: manager.loadThumbnail(for: item) ?? Data()) != nil)
-    }
-
-    @Test func testPasscodeChangeReencryptsThumbnail() async throws {
-        let storage = try makeStorage()
-        let manager = storage.fileStorageManager
-        manager.setupEncryptionKey(from: "old-thumb-key")
-        let item = try manager.saveFile(
-            data: createTestImage().pngData()!,
-            fileName: "migrate-thumb.png",
-            fileType: "image/png"
-        )
-        let before = try Data(contentsOf: storage.rootURL
-            .appendingPathComponent("Thumbnails")
-            .appendingPathComponent(item.storedThumbnailName ?? ""))
-
-        try await manager.migrateFilesToNewEncryptionKey(
-            oldPassword: "old-thumb-key",
-            newPassword: "new-thumb-key"
-        ) { _, _ in }
-
-        let after = try Data(contentsOf: storage.rootURL
-            .appendingPathComponent("Thumbnails")
-            .appendingPathComponent(item.storedThumbnailName ?? ""))
-        #expect(after != before)
-        #expect(UIImage(data: manager.loadThumbnail(for: item) ?? Data()) != nil)
-
-        manager.setupEncryptionKey(from: "old-thumb-key")
-        #expect(manager.loadThumbnail(for: item) == nil)
     }
 
     @Test func testThumbnailForNonImage() async throws {
@@ -971,3 +1048,22 @@ struct FileStorageManagerTests {
         }
     }
 } 
+
+/// Lets a test make the Keychain unreadable, as it is before first unlock after a reboot.
+private final class FlakyVaultKeyStore: VaultKeyDerivationStoring {
+    var failReads = false
+    private let backing = InMemoryVaultKeyDerivationStore()
+
+    func loadMaterial() throws -> StoredVaultKeyMaterial? {
+        if failReads { throw KeychainError.unknown(errSecInteractionNotAllowed) }
+        return try backing.loadMaterial()
+    }
+
+    func saveEnvelope(_ envelope: VaultKeyEnvelope) throws {
+        try backing.saveEnvelope(envelope)
+    }
+
+    func deleteRecord() {
+        backing.deleteRecord()
+    }
+}

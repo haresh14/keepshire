@@ -58,9 +58,22 @@ final class EncryptedFileStore {
         return try cryptoService.decrypt(encryptedData, using: key)
     }
 
-    func reencrypt(fileName: String, oldKey: SymmetricKey, newKey: SymmetricKey) throws {
-        let plaintext = try read(fileName: fileName, key: oldKey)
-        try write(plaintext, fileName: fileName, key: newKey)
+    /// Checks a key against the first sealed unit only, so a large file is never loaded whole.
+    func canOpen(fileName: String, key: SymmetricKey) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url(for: fileName)) else { return false }
+        defer { try? handle.close() }
+        guard let header = try? handle.read(upToCount: VaultBlobFormat.headerByteCount) else { return false }
+        if header.prefix(VaultBlobFormat.magic.count) == VaultBlobFormat.magic {
+            guard header.count == VaultBlobFormat.headerByteCount,
+                  let lengthBytes = try? handle.read(upToCount: 4), lengthBytes.count == 4 else { return false }
+            let sealedLength = Int(lengthBytes.uint32BigEndian)
+            guard sealedLength > 0,
+                  let sealed = try? handle.read(upToCount: sealedLength),
+                  sealed.count == sealedLength else { return false }
+            return (try? cryptoService.decrypt(sealed, using: key)) != nil
+        }
+        guard let data = try? Data(contentsOf: url(for: fileName)) else { return false }
+        return (try? cryptoService.decrypt(data, using: key)) != nil
     }
 
     func move(from oldFileName: String, to newFileName: String) throws {

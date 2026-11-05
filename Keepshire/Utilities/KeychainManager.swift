@@ -70,22 +70,7 @@ class KeychainManager: KeychainManaging {
             throw KeychainError.invalidData
         }
         
-        // Delete any existing password first
-        try? deletePassword()
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: passwordKey,
-            kSecValueData as String: passwordData,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        
-        let status = SecItemAdd(query as CFDictionary, nil)
-        
-        guard status == errSecSuccess else {
-            throw KeychainError.unknown(status)
-        }
+        try upsert(passwordData, account: passwordKey)
     }
     
     func getPassword() throws -> String {
@@ -129,12 +114,16 @@ class KeychainManager: KeychainManaging {
         }
     }
     
+    /// Only a missing item means "not set". A locked or busy Keychain must not send an existing
+    /// user back to first-run setup, where a new passcode would replace the one their vault key needs.
     func isPasswordSet() -> Bool {
         do {
             _ = try getPassword()
             return true
-        } catch {
+        } catch KeychainError.noPassword {
             return false
+        } catch {
+            return true
         }
     }
     
@@ -150,22 +139,7 @@ class KeychainManager: KeychainManaging {
             throw KeychainError.duplicateEntry
         }
         
-        // Delete any existing fake password first
-        try? deleteFakePassword()
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: fakePasswordKey,
-            kSecValueData as String: passwordData,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        
-        let status = SecItemAdd(query as CFDictionary, nil)
-        
-        guard status == errSecSuccess else {
-            throw KeychainError.unknown(status)
-        }
+        try upsert(passwordData, account: fakePasswordKey)
     }
     
     func getFakePassword() throws -> String {
@@ -343,25 +317,14 @@ class KeychainManager: KeychainManaging {
     
     // MARK: - Data Cleanup
     
-    // MARK: - Vault key derivation (PBKDF2 salt + parameters)
+    // MARK: - Vault key material (wrapped vault key, or a pre-envelope derivation record)
 
-    func saveKeyDerivationRecord(_ record: VaultKeyDerivationRecord) throws {
-        let data = try JSONEncoder().encode(record)
-        deleteKeyDerivationRecord()
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: keyDerivationAccount,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw KeychainError.unknown(status)
-        }
+    func saveKeyMaterialData(_ data: Data) throws {
+        try upsert(data, account: keyDerivationAccount)
     }
 
-    func loadKeyDerivationRecord() -> VaultKeyDerivationRecord? {
+    /// Returns nil only when the item does not exist; every other failure throws.
+    func loadKeyMaterialData() throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -371,10 +334,42 @@ class KeychainManager: KeychainManaging {
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else {
+        if status == errSecItemNotFound {
             return nil
         }
+        guard status == errSecSuccess, let data = result as? Data else {
+            throw KeychainError.unknown(status)
+        }
+        return data
+    }
+
+    func saveKeyDerivationRecord(_ record: VaultKeyDerivationRecord) throws {
+        try saveKeyMaterialData(JSONEncoder().encode(record))
+    }
+
+    func loadKeyDerivationRecord() -> VaultKeyDerivationRecord? {
+        guard let data = try? loadKeyMaterialData() else { return nil }
         return try? JSONDecoder().decode(VaultKeyDerivationRecord.self, from: data)
+    }
+
+    /// Updates in place so a crash or failure never leaves the item deleted but not re-added.
+    private func upsert(_ data: Data, account: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ]
+        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(query.merging(attributes) { $1 } as CFDictionary, nil)
+        }
+        guard status == errSecSuccess else {
+            throw KeychainError.unknown(status)
+        }
     }
 
     func deleteKeyDerivationRecord() {

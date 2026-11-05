@@ -1,24 +1,47 @@
 import Foundation
 
+/// What the Keychain holds for the vault key: the current envelope, or the bare derivation
+/// record written by builds where the passcode-derived key encrypted files directly.
+enum StoredVaultKeyMaterial: Equatable {
+    case envelope(VaultKeyEnvelope)
+    case derivationRecord(VaultKeyDerivationRecord)
+}
+
 protocol VaultKeyDerivationStoring {
-    func loadRecord() -> VaultKeyDerivationRecord?
-    func saveRecord(_ record: VaultKeyDerivationRecord) throws
+    /// Returns nil only when nothing is stored. Any other Keychain failure throws, because
+    /// treating "unreadable" as "absent" would mint a new key and orphan every file.
+    func loadMaterial() throws -> StoredVaultKeyMaterial?
+    /// Replaces the stored material in one step; a failed write leaves the previous value.
+    func saveEnvelope(_ envelope: VaultKeyEnvelope) throws
     func deleteRecord()
 }
 
-final class InMemoryVaultKeyDerivationStore: VaultKeyDerivationStoring {
-    private var record: VaultKeyDerivationRecord?
+extension StoredVaultKeyMaterial {
+    static func decode(_ data: Data) -> StoredVaultKeyMaterial? {
+        let decoder = JSONDecoder()
+        if let envelope = try? decoder.decode(VaultKeyEnvelope.self, from: data) {
+            return .envelope(envelope)
+        }
+        if let record = try? decoder.decode(VaultKeyDerivationRecord.self, from: data) {
+            return .derivationRecord(record)
+        }
+        return nil
+    }
+}
 
-    func loadRecord() -> VaultKeyDerivationRecord? {
-        record
+final class InMemoryVaultKeyDerivationStore: VaultKeyDerivationStoring {
+    private var material: StoredVaultKeyMaterial?
+
+    func loadMaterial() throws -> StoredVaultKeyMaterial? {
+        material
     }
 
-    func saveRecord(_ record: VaultKeyDerivationRecord) throws {
-        self.record = record
+    func saveEnvelope(_ envelope: VaultKeyEnvelope) throws {
+        material = .envelope(envelope)
     }
 
     func deleteRecord() {
-        record = nil
+        material = nil
     }
 }
 
@@ -29,12 +52,16 @@ final class KeychainVaultKeyDerivationStore: VaultKeyDerivationStoring {
         self.keychain = keychain
     }
 
-    func loadRecord() -> VaultKeyDerivationRecord? {
-        keychain.loadKeyDerivationRecord()
+    func loadMaterial() throws -> StoredVaultKeyMaterial? {
+        guard let data = try keychain.loadKeyMaterialData() else { return nil }
+        guard let material = StoredVaultKeyMaterial.decode(data) else {
+            throw KeychainError.invalidData
+        }
+        return material
     }
 
-    func saveRecord(_ record: VaultKeyDerivationRecord) throws {
-        try keychain.saveKeyDerivationRecord(record)
+    func saveEnvelope(_ envelope: VaultKeyEnvelope) throws {
+        try keychain.saveKeyMaterialData(JSONEncoder().encode(envelope))
     }
 
     func deleteRecord() {

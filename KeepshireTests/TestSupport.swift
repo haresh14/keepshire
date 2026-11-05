@@ -143,17 +143,19 @@ final class FakeFileStorageManager: FileStorageManaging {
     func determineFileType(from fileName: String) -> String {
         fileName.hasSuffix(".pdf") ? "application/pdf" : "application/octet-stream"
     }
-    func setupEncryptionKey(from password: String) { encryptionPasswords.append(password) }
+    @discardableResult
+    func setupEncryptionKey(from password: String) -> Bool {
+        encryptionPasswords.append(password)
+        return true
+    }
     @discardableResult
     func importPendingSharedFiles() -> Int {
         pendingShareImportCalls += 1
         return 0
     }
-    func migrateFilesToNewEncryptionKey(
-        oldPassword: String,
-        newPassword: String,
-        progress: @escaping (Int, Int) -> Void
-    ) async throws {}
+    func changeCredential(from oldPassword: String, to newPassword: String, commit: () throws -> Void) throws {
+        try commit()
+    }
     func toggleFavorite(for vaultItem: VaultItem) { vaultItem.isFavorite.toggle() }
     func fetchFavoriteItems() -> [VaultItem] { [] }
     func renameFile(vaultItem: VaultItem, newFileName: String) throws {}

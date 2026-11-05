@@ -43,10 +43,11 @@ protocol FileStorageManaging {
     func clearThumbnailCache()
     func loadImage(for vaultItem: VaultItem) async throws -> Data
     func determineFileType(from fileName: String) -> String
-    func setupEncryptionKey(from password: String)
+    @discardableResult
+    func setupEncryptionKey(from password: String) -> Bool
     @discardableResult
     func importPendingSharedFiles() -> Int
-    func migrateFilesToNewEncryptionKey(oldPassword: String, newPassword: String, progress: @escaping (Int, Int) -> Void) async throws
+    func changeCredential(from oldPassword: String, to newPassword: String, commit: () throws -> Void) throws
     func toggleFavorite(for vaultItem: VaultItem)
     func fetchFavoriteItems() -> [VaultItem]
     func renameFile(vaultItem: VaultItem, newFileName: String) throws

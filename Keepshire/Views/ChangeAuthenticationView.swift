@@ -19,9 +19,6 @@ struct ChangeAuthenticationView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var navigationPath = NavigationPath()
-    @State private var showMigrationProgress: Bool = false
-    @State private var migrationProgress: Int = 0
-    @State private var migrationTotal: Int = 0
     /// The stored credential the vault key is derived from; the typed text may differ in whitespace.
     @State private var verifiedOldPassword: String = ""
     @FocusState private var isCurrentPasswordFocused: Bool
@@ -59,27 +56,17 @@ struct ChangeAuthenticationView: View {
             }
             .navigationDestination(for: AuthenticationType.self) { authType in
                 if authType.isPasscode {
-                    PasscodeSetupView(authType: authType, onPasscodeSet: {
-                        handlePasscodeChanged()
-                    }, onCancel: {
-                        navigationPath.removeLast()
-                    })
+                    PasscodeSetupView(
+                        authType: authType,
+                        onPasscodeSet: finishCredentialChange,
+                        onCancel: { navigationPath.removeLast() },
+                        saveCredential: { try commitCredential($0, authType: authType) }
+                    )
                 } else {
-                    PasswordSetupView(onPasswordSet: {
-                        handlePasswordChanged()
-                    }, onCancel: {
-                        navigationPath.removeLast()
-                    })
-                }
-            }
-            .navigationDestination(for: String.self) { destination in
-                if destination == "migration" {
-                    MigrationProgressView(
-                        currentProgress: migrationProgress,
-                        totalItems: migrationTotal,
-                        onCancel: {
-                            navigationPath.removeLast()
-                        }
+                    PasswordSetupView(
+                        onPasswordSet: finishCredentialChange,
+                        onCancel: { navigationPath.removeLast() },
+                        saveCredential: { try commitCredential($0, authType: .password) }
                     )
                 }
             }
@@ -166,7 +153,7 @@ struct ChangeAuthenticationView: View {
         KeepshireHero(
             artwork: .symbol("checkmark.shield.fill"),
             title: "Choose a new lock",
-            subtitle: "Every file is re-encrypted with the new passcode or password.",
+            subtitle: "Your files stay as they are; only the lock that opens them changes.",
             artworkSize: 64
         )
     }
@@ -244,69 +231,22 @@ struct ChangeAuthenticationView: View {
         }
     }
     
-    // MARK: - Migration Handlers
-    
-    private func handlePasscodeChanged() {
-        startMigrationProcess()
-    }
-    
-    private func handlePasswordChanged() {
-        startMigrationProcess()
-    }
-    
-    private func startMigrationProcess() {
-        let oldPassword = verifiedOldPassword
-        Task {
-            do {
-                // Get the new password that was just saved
-                let newPassword = try KeychainManager.shared.getPassword()
-                
-                await MainActor.run {
-                    migrationProgress = 0
-                    migrationTotal = 0
-                    // Navigate to migration view
-                    navigationPath.append("migration")
-                }
-                
-                // Start migration with old and new passwords
-                try await FileStorageManager.shared.migrateFilesToNewEncryptionKey(
-                    oldPassword: oldPassword,
-                    newPassword: newPassword,
-                    progress: { current, total in
-                        Task { @MainActor in
-                            migrationProgress = current
-                            migrationTotal = total
-                        }
-                    }
-                )
-                
-                // Migration completed successfully
-                // Update the encryption key to the new one
-                FileStorageManager.shared.setupEncryptionKey(from: newPassword)
-                
-                await MainActor.run {
-                    // Navigate back and dismiss
-                    navigationPath = NavigationPath()
-                    onAuthChanged()
-                    dismiss()
-                }
-                
-            } catch {
-                // The setup screen already stored the new credential. `migrationFailed` means the
-                // files are still sealed with the old key, so put the old credential back or the
-                // vault cannot be opened.
-                if case FileStorageError.migrationFailed = error {
-                    try? KeychainManager.shared.savePassword(oldPassword)
-                    KeychainManager.shared.setAuthenticationType(currentAuthType)
-                    FileStorageManager.shared.setupEncryptionKey(from: oldPassword)
-                }
-                await MainActor.run {
-                    // Navigate back to auth view and show error
-                    navigationPath = NavigationPath()
-                    showError(message: "Failed to update encryption: \(error.localizedDescription)")
-                }
-            }
+    // MARK: - Credential Change
+
+    /// Files are sealed with a vault key that never changes; this only re-wraps that key.
+    /// The new credential reaches the Keychain inside `changeCredential`, after the new wrap
+    /// is stored, so no failure can leave a credential that does not open the vault.
+    private func commitCredential(_ newPassword: String, authType: AuthenticationType) throws {
+        try FileStorageManager.shared.changeCredential(from: verifiedOldPassword, to: newPassword) {
+            try KeychainManager.shared.savePassword(newPassword)
+            KeychainManager.shared.setAuthenticationType(authType)
         }
+    }
+
+    private func finishCredentialChange() {
+        navigationPath = NavigationPath()
+        onAuthChanged()
+        dismiss()
     }
 }
 

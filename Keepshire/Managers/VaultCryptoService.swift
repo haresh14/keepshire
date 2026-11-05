@@ -37,6 +37,19 @@ struct VaultKeyDerivationRecord: Codable, Equatable {
     }
 }
 
+/// The vault key sealed under one credential. Changing the credential adds or swaps a wrap;
+/// the vault key itself, and so every file and metadata blob, never changes.
+struct VaultKeyWrap: Codable, Equatable {
+    let derivation: VaultKeyDerivationRecord
+    let sealedKey: Data
+}
+
+/// Holds one wrap normally and two only while a credential change is in flight, so whichever
+/// credential the Keychain ends up holding after a crash can still open the vault key.
+struct VaultKeyEnvelope: Codable, Equatable {
+    var wraps: [VaultKeyWrap]
+}
+
 enum VaultCryptoError: Error {
     case keyDerivationFailed
 }
@@ -48,6 +61,24 @@ struct VaultCryptoService {
 
     func key(from password: String, record: VaultKeyDerivationRecord) throws -> SymmetricKey {
         SymmetricKey(data: try pbkdf2(password: password, record: record))
+    }
+
+    func makeVaultKey() -> SymmetricKey {
+        SymmetricKey(size: .bits256)
+    }
+
+    func wrap(_ vaultKey: SymmetricKey, password: String) throws -> VaultKeyWrap {
+        let derivation = makeRecord()
+        let keyBytes = vaultKey.withUnsafeBytes { Data($0) }
+        let sealed = try encrypt(keyBytes, using: key(from: password, record: derivation))
+        return VaultKeyWrap(derivation: derivation, sealedKey: sealed)
+    }
+
+    /// AES-GCM authenticates the unwrap, so a wrong password yields nil, never a wrong key.
+    func unwrap(_ wrap: VaultKeyWrap, password: String) -> SymmetricKey? {
+        guard let wrappingKey = try? key(from: password, record: wrap.derivation),
+              let keyBytes = try? decrypt(wrap.sealedKey, using: wrappingKey) else { return nil }
+        return SymmetricKey(data: keyBytes)
     }
 
     /// Opens vault files that predate the Keychain derivation record.
