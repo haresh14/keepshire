@@ -51,8 +51,9 @@ struct PasscodeView: View {
                                 .onChange(of: passcode) { _, value in
                                     if !value.isEmpty && !feedback.isLocked { feedback.clear() }
                                 }
-                                .disabled(feedback.isLocked)
-                                .opacity(feedback.isLocked ? 0.45 : 1)
+                                // The keypad dims its own digit keys so its Face ID key stays usable.
+                                .disabled(isPasswordType && feedback.isLocked)
+                                .opacity(isPasswordType && feedback.isLocked ? 0.45 : 1)
                                 .animation(.easeOut(duration: 0.2), value: feedback.isLocked)
                             errorView
                             if isSettingPasscode {
@@ -152,7 +153,16 @@ struct PasscodeView: View {
                 }
             } else {
                 VStack(spacing: 16) {
-                    OTPStylePasscodeView(digitCount: digitCount, passcode: $passcode)
+                    OTPStylePasscodeView(
+                        digitCount: digitCount,
+                        passcode: $passcode,
+                        biometricKey: shouldShowBiometric ? BiometricKey(
+                            systemImage: biometricIconName,
+                            label: "Unlock with \(biometricDisplayName)",
+                            action: authenticateWithBiometrics
+                        ) : nil,
+                        keysDisabled: feedback.isLocked
+                    )
                         .onChange(of: passcode) { _, newValue in
                             // Auto-login when passcode is complete
                             if newValue.count == digitCount {
@@ -204,9 +214,10 @@ struct PasscodeView: View {
         }
     }
     
+    /// Passcodes get Face ID as a key in the keypad; a password has no keypad, so it keeps this button.
     @ViewBuilder
     private var biometricButton: some View {
-        if shouldShowBiometric {
+        if shouldShowBiometric && isPasswordType {
             Button(action: authenticateWithBiometrics) {
                 Label("Use \(biometricDisplayName)", systemImage: biometricIconName)
             }

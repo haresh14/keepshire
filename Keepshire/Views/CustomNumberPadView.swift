@@ -7,10 +7,20 @@
 
 import SwiftUI
 
+/// The key in the bottom-left slot that unlocks with Face ID or Touch ID.
+struct BiometricKey {
+    let systemImage: String
+    let label: String
+    let action: () -> Void
+}
+
 struct CustomNumberPadView: View {
     let onNumberTapped: (String) -> Void
     let onBackspaceTapped: () -> Void
     let onHelpTapped: (() -> Void)?
+    let biometricKey: BiometricKey?
+    /// Dims and disables the digit and delete keys only, so biometrics stay usable during a lockout.
+    let keysDisabled: Bool
     @ScaledMetric(relativeTo: .title2) private var keySize: CGFloat = Self.baseKeySize
 
     static let baseKeySize: CGFloat = 76
@@ -24,10 +34,18 @@ struct CustomNumberPadView: View {
         return size * 3 + columnSpacing * 2
     }
     
-    init(onNumberTapped: @escaping (String) -> Void, onBackspaceTapped: @escaping () -> Void, onHelpTapped: (() -> Void)? = nil) {
+    init(
+        onNumberTapped: @escaping (String) -> Void,
+        onBackspaceTapped: @escaping () -> Void,
+        onHelpTapped: (() -> Void)? = nil,
+        biometricKey: BiometricKey? = nil,
+        keysDisabled: Bool = false
+    ) {
         self.onNumberTapped = onNumberTapped
         self.onBackspaceTapped = onBackspaceTapped
         self.onHelpTapped = onHelpTapped
+        self.biometricKey = biometricKey
+        self.keysDisabled = keysDisabled
     }
     
     private let numbers = [
@@ -42,7 +60,9 @@ struct CustomNumberPadView: View {
             ForEach(numbers, id: \.self) { row in
                 HStack(spacing: Self.columnSpacing) {
                     ForEach(row, id: \.self) { item in
-                        if item == "?" && onHelpTapped == nil {
+                        if item == "?", let biometricKey {
+                            BiometricKeyButton(key: biometricKey, size: min(keySize, Self.maxKeySize))
+                        } else if item == "?" && onHelpTapped == nil {
                             // No help action here: keep the slot so the grid stays aligned.
                             Color.clear
                                 .frame(width: min(keySize, Self.maxKeySize), height: min(keySize, Self.maxKeySize))
@@ -61,6 +81,9 @@ struct CustomNumberPadView: View {
                                     }
                                 }
                             )
+                            .disabled(keysDisabled)
+                            .opacity(keysDisabled ? 0.45 : 1)
+                            .animation(.easeOut(duration: 0.2), value: keysDisabled)
                         }
                     }
                 }
@@ -110,6 +133,26 @@ struct NumberPadButton: View {
         .frame(minWidth: 44, minHeight: 44)
         .accessibilityIdentifier(text == "⌫" ? "keypad.delete" : text == "?" ? "keypad.help" : "keypad.\(text)")
         .accessibilityLabel(text == "⌫" ? "Delete" : text == "?" ? "Help" : text)
+    }
+}
+
+/// Drawn like the delete key, a bare glyph, so it reads as a utility rather than a digit.
+struct BiometricKeyButton: View {
+    let key: BiometricKey
+    let size: CGFloat
+
+    var body: some View {
+        Button(action: key.action) {
+            Image(systemName: key.systemImage)
+                .font(.system(size: 28, weight: .regular))
+                .foregroundStyle(KeepshireTheme.accent)
+                .frame(width: size, height: size)
+                .contentShape(Circle())
+        }
+        .buttonStyle(NumberPadButtonStyle())
+        .frame(minWidth: 44, minHeight: 44)
+        .accessibilityIdentifier("keypad.biometric")
+        .accessibilityLabel(key.label)
     }
 }
 

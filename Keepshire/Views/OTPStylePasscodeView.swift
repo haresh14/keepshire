@@ -13,12 +13,22 @@ struct OTPStylePasscodeView: View {
     @State private var digits: [String]
     @State private var currentIndex: Int = 0
     let onHelpTapped: (() -> Void)?
+    let biometricKey: BiometricKey?
+    let keysDisabled: Bool
     
-    init(digitCount: Int, passcode: Binding<String>, onHelpTapped: (() -> Void)? = nil) {
+    init(
+        digitCount: Int,
+        passcode: Binding<String>,
+        onHelpTapped: (() -> Void)? = nil,
+        biometricKey: BiometricKey? = nil,
+        keysDisabled: Bool = false
+    ) {
         self.digitCount = digitCount
         self._passcode = passcode
         self._digits = State(initialValue: Array(repeating: "", count: digitCount))
         self.onHelpTapped = onHelpTapped
+        self.biometricKey = biometricKey
+        self.keysDisabled = keysDisabled
     }
     
     /// Matches `CustomNumberPadView`'s key size so the boxes span exactly the keypad width.
@@ -54,7 +64,9 @@ struct OTPStylePasscodeView: View {
                 onBackspaceTapped: {
                     handleBackspace()
                 },
-                onHelpTapped: onHelpTapped
+                onHelpTapped: onHelpTapped,
+                biometricKey: biometricKey,
+                keysDisabled: keysDisabled
             )
         }
         .onAppear {
