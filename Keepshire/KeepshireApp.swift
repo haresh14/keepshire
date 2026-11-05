@@ -56,7 +56,7 @@ struct KeepshireApp: App {
             return
         }
 
-        try? KeychainManager.shared.savePassword("1234")
+        try? FileStorageManager.shared.createVault(password: "1234", authType: .passcode4)
         KeychainManager.shared.setAuthenticationType(.passcode4)
         KeychainManager.shared.setBiometricEnabled(false)
         KeychainManager.shared.setLockTimeout(KeychainManager.LockTimeout.never.rawValue)

@@ -42,12 +42,20 @@ struct VaultKeyDerivationRecord: Codable, Equatable {
 struct VaultKeyWrap: Codable, Equatable {
     let derivation: VaultKeyDerivationRecord
     let sealedKey: Data
+    /// Stored with the wrap so the lock screen's keypad can never disagree with the credential.
+    var authType: String? = nil
 }
 
-/// Holds one wrap normally and two only while a credential change is in flight, so whichever
-/// credential the Keychain ends up holding after a crash can still open the vault key.
+/// The only stored form of the user's credential: nothing else in the Keychain can reveal it.
+/// Builds before this one could leave two wraps behind; unlocking settles on the one that opens.
 struct VaultKeyEnvelope: Codable, Equatable {
     var wraps: [VaultKeyWrap]
+}
+
+/// Lets the decoy credential be checked without storing it. Opening nothing, it reveals nothing.
+struct CredentialVerifier: Codable, Equatable {
+    let derivation: VaultKeyDerivationRecord
+    let digest: Data
 }
 
 enum VaultCryptoError: Error {
@@ -67,11 +75,23 @@ struct VaultCryptoService {
         SymmetricKey(size: .bits256)
     }
 
-    func wrap(_ vaultKey: SymmetricKey, password: String) throws -> VaultKeyWrap {
+    func wrap(_ vaultKey: SymmetricKey, password: String, authType: AuthenticationType? = nil) throws -> VaultKeyWrap {
         let derivation = makeRecord()
         let keyBytes = vaultKey.withUnsafeBytes { Data($0) }
         let sealed = try encrypt(keyBytes, using: key(from: password, record: derivation))
-        return VaultKeyWrap(derivation: derivation, sealedKey: sealed)
+        return VaultKeyWrap(derivation: derivation, sealedKey: sealed, authType: authType?.rawValue)
+    }
+
+    func makeVerifier(for password: String) throws -> CredentialVerifier {
+        let derivation = makeRecord()
+        return CredentialVerifier(derivation: derivation, digest: try pbkdf2(password: password, record: derivation))
+    }
+
+    func matches(_ password: String, verifier: CredentialVerifier) -> Bool {
+        guard let digest = try? pbkdf2(password: password, record: verifier.derivation),
+              digest.count == verifier.digest.count else { return false }
+        // Constant time, so response timing says nothing about how close a guess was.
+        return zip(digest, verifier.digest).reduce(0) { $0 | ($1.0 ^ $1.1) } == 0
     }
 
     /// AES-GCM authenticates the unwrap, so a wrong password yields nil, never a wrong key.

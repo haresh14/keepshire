@@ -243,13 +243,19 @@ struct WebExportUnlockSheet: View {
     }
 
     private func verifyCredential() {
-        let result = KeychainManager.shared.validatePassword(credential)
-        // The duress credential must never open a download window.
-        guard result.isValid, !result.isFakeLogin else {
+        let throttle = UnlockThrottle.shared
+        if let remaining = throttle.remainingLockout() {
             credential = ""
-            errorMessage = "That passcode is not right."
+            errorMessage = UnlockThrottle.message(for: remaining)
             return
         }
+        // Only the real credential opens the envelope, so the duress one can never open a download window.
+        guard FileStorageManager.shared.verifyCredential(credential) else {
+            credential = ""
+            errorMessage = throttle.recordFailure().map(UnlockThrottle.message(for:)) ?? "That passcode is not right."
+            return
+        }
+        throttle.recordSuccess()
         onUnlocked()
         dismiss()
     }

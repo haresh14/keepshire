@@ -243,8 +243,7 @@ struct PasswordSetupView: View {
             // Save fake password
             do {
                 // Validate fake password is different from main password
-                let mainPassword = try KeychainManager.shared.getPassword()
-                if cleanPassword == mainPassword {
+                if FileStorageManager.shared.verifyCredential(cleanPassword) {
                     showError(message: "Fake password must be different from your main password")
                     password = ""
                     confirmPassword = ""
@@ -267,7 +266,7 @@ struct PasswordSetupView: View {
                 if let saveCredential {
                     try saveCredential(cleanPassword)
                 } else {
-                    try KeychainManager.shared.savePassword(cleanPassword)
+                    try FileStorageManager.shared.createVault(password: cleanPassword, authType: .password)
                     KeychainManager.shared.setAuthenticationType(.password)
                 }
                 onPasswordSet()

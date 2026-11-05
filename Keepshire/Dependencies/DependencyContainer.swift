@@ -47,7 +47,15 @@ protocol FileStorageManaging {
     func setupEncryptionKey(from password: String) -> Bool
     @discardableResult
     func importPendingSharedFiles() -> Int
-    func changeCredential(from oldPassword: String, to newPassword: String, commit: () throws -> Void) throws
+    @discardableResult
+    func unlock(password: String) -> Bool
+    func createVault(password: String, authType: AuthenticationType) throws
+    func verifyCredential(_ password: String) -> Bool
+    func changeCredential(from oldPassword: String, to newPassword: String, authType: AuthenticationType) throws
+    var hasBiometricUnlock: Bool { get }
+    func enableBiometricUnlock() throws
+    func disableBiometricUnlock()
+    func unlockWithBiometrics(prompt: String, completion: @escaping (Bool) -> Void)
     func toggleFavorite(for vaultItem: VaultItem)
     func fetchFavoriteItems() -> [VaultItem]
     func renameFile(vaultItem: VaultItem, newFileName: String) throws
@@ -59,12 +67,10 @@ protocol FileStorageManaging {
 }
 
 protocol KeychainManaging {
-    func savePassword(_ password: String) throws
-    func getPassword() throws -> String
     func deletePassword() throws
-    func validatePassword(_ password: String) -> (isValid: Bool, isFakeLogin: Bool)
     func isPasswordSet() -> Bool
     func setFakePassword(_ password: String) throws
+    func verifyFakePassword(_ password: String) -> Bool
     func deleteFakePassword() throws
     func isFakePasswordSet() -> Bool
     func setBiometricEnabled(_ enabled: Bool)

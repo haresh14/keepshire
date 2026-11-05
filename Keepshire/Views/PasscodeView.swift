@@ -224,8 +224,9 @@ struct PasscodeView: View {
     
     private var shouldShowBiometric: Bool {
         !isSettingPasscode && 
-        KeychainManager.shared.isBiometricEnabled() && 
-        BiometricAuthManager.shared.canUseBiometrics()
+        KeychainManager.shared.isBiometricEnabled() &&
+        BiometricAuthManager.shared.canUseBiometrics() &&
+        FileStorageManager.shared.hasBiometricUnlock
     }
     
     private var biometricIconName: String {
@@ -285,8 +286,7 @@ struct PasscodeView: View {
         }
         
         do {
-            try KeychainManager.shared.savePassword(passcode)
-            // Password/Passcode saved successfully
+            try FileStorageManager.shared.createVault(password: passcode, authType: authType)
             onAuthenticated()
         } catch {
             VaultLog.debug("ERROR: Failed to save password/passcode: \(error)")
@@ -296,35 +296,43 @@ struct PasscodeView: View {
     }
     
     private func handleAuthentication() {
-        let validation = KeychainManager.shared.validatePassword(passcode)
-        
-        if validation.isValid {
-            KeychainManager.shared.clearLastBackgroundTime()
-            
-            // Set login state based on whether it's fake login or not
-            LoginStateManager.shared.setLoginState(isFakeLogin: validation.isFakeLogin)
-            
-            onAuthenticated()
+        let throttle = UnlockThrottle.shared
+        if let remaining = throttle.remainingLockout() {
+            showError(message: UnlockThrottle.message(for: remaining))
+            passcode = ""
+            return
+        }
+
+        // Opening the vault key is the check: no stored copy of the passcode exists to compare against.
+        // The decoy never unlocks the real key, so its session cannot read the real files.
+        let isFakeLogin: Bool
+        if FileStorageManager.shared.unlock(password: passcode) {
+            isFakeLogin = false
+        } else if KeychainManager.shared.verifyFakePassword(passcode) {
+            isFakeLogin = true
         } else {
             let type = isPasswordType ? "password" : "passcode"
-            showError(message: "Incorrect \(type)")
+            if let wait = throttle.recordFailure() {
+                showError(message: UnlockThrottle.message(for: wait))
+            } else {
+                showError(message: "Incorrect \(type)")
+            }
             passcode = ""
+            return
         }
+
+        KeychainManager.shared.clearLastBackgroundTime()
+        LoginStateManager.shared.setLoginState(isFakeLogin: isFakeLogin)
+        onAuthenticated()
     }
     
     private func authenticateWithBiometrics() {
-        BiometricAuthManager.shared.authenticateWithBiometrics(reason: "Unlock your vault") { success, error in
-            if success {
-                KeychainManager.shared.clearLastBackgroundTime()
-                
-                // Biometric authentication is always real login (not fake)
-                LoginStateManager.shared.setLoginState(isFakeLogin: false)
-                
-                onAuthenticated()
-            } else if let error = error {
-                // User cancelled or biometric failed, show passcode field
-                VaultLog.debug("Biometric authentication failed: \(error.localizedDescription)")
-            }
+        FileStorageManager.shared.unlockWithBiometrics(prompt: "Unlock your vault") { success in
+            guard success else { return }
+            KeychainManager.shared.clearLastBackgroundTime()
+            // Biometric authentication is always real login (not fake)
+            LoginStateManager.shared.setLoginState(isFakeLogin: false)
+            onAuthenticated()
         }
     }
     

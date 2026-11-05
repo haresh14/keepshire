@@ -38,45 +38,53 @@ struct KeychainManagerTests {
         #expect(manager1 === manager2, "KeychainManager should be a singleton")
     }
     
-    // MARK: - Password Management Tests
-    
-    @Test func testPasswordStorage() async throws {
-        let testKeychain = TestKeychain()
-        let manager = testKeychain.manager
-        let testPassword = "TestPassword123!"
-        
-        // Test storing password
-        try manager.savePassword(testPassword)
-        
-        // Test password exists
-        #expect(manager.isPasswordSet() == true, "Password should be set after storing")
-        
-        // Test retrieving password
-        let retrievedPassword = try manager.getPassword()
-        #expect(retrievedPassword == testPassword, "Retrieved password should match stored password")
-        
-        // Cleanup
-        try manager.deletePassword()
+    // MARK: - Credential Tests
+
+    private func storeEnvelope(_ manager: KeychainManager, authType: AuthenticationType?) throws {
+        let crypto = VaultCryptoService()
+        let wrap = try crypto.wrap(crypto.makeVaultKey(), password: "135790", authType: authType)
+        try manager.saveKeyMaterialData(JSONEncoder().encode(VaultKeyEnvelope(wraps: [wrap])))
     }
 
-    @Test func testAuthTypeIsRepairedWhenItCannotEnterTheStoredCredential() async throws {
-        let defaults = UserDefaults(suiteName: "auth-type-\(UUID().uuidString)")!
-        let manager = KeychainManager(service: "auth-type-\(UUID().uuidString)", defaults: defaults)
-        defer { try? manager.deletePassword() }
+    @Test func testVaultCountsAsSetOnlyOnceItsKeyIsStored() async throws {
+        let testKeychain = TestKeychain()
+        let manager = testKeychain.manager
 
-        // A crash after the Keychain write but before the type reached disk.
-        try manager.savePassword("135790")
+        #expect(!manager.isPasswordSet())
+        try storeEnvelope(manager, authType: .passcode6)
+        #expect(manager.isPasswordSet())
+    }
+
+    @Test func testAuthTypeComesFromTheEnvelopeNotDefaults() async throws {
+        let testKeychain = TestKeychain()
+        let manager = testKeychain.manager
+
+        // Defaults can lag behind a crash; the envelope is written with the credential itself.
         manager.setAuthenticationType(.passcode4)
+        try storeEnvelope(manager, authType: .passcode6)
         #expect(manager.getAuthenticationType() == .passcode6)
+        #expect(manager.isAuthenticationTypeSet())
 
-        try manager.savePassword("Secret123")
-        manager.setAuthenticationType(.passcode6)
-        #expect(manager.getAuthenticationType() == .password)
+        // Envelopes from earlier builds carry no type, so the stored default still applies.
+        try storeEnvelope(manager, authType: nil)
+        #expect(manager.getAuthenticationType() == .passcode4)
+    }
 
-        // A password type can enter any credential, so a digit-only password keeps its type.
-        try manager.savePassword("123456")
-        manager.setAuthenticationType(.password)
-        #expect(manager.getAuthenticationType() == .password)
+    @Test func testFakePasswordIsStoredOnlyAsAVerifier() async throws {
+        let testKeychain = TestKeychain()
+        let manager = testKeychain.manager
+
+        #expect(!manager.isFakePasswordSet())
+        try manager.saveFakePassword("987654")
+
+        #expect(manager.isFakePasswordSet())
+        #expect(manager.verifyFakePassword("987654"))
+        #expect(!manager.verifyFakePassword("987655"))
+        #expect(!manager.verifyFakePassword(""))
+
+        try manager.deleteFakePassword()
+        #expect(!manager.isFakePasswordSet())
+        #expect(!manager.verifyFakePassword("987654"))
     }
 
     @Test func testKeyDerivationRecordStorage() async throws {
@@ -89,45 +97,6 @@ struct KeychainManagerTests {
 
         manager.clearAllKeychainData()
         #expect(manager.loadKeyDerivationRecord() == nil)
-    }
-    
-    @Test func testPasswordDeletion() async throws {
-        let testKeychain = TestKeychain()
-        let manager = testKeychain.manager
-        let testPassword = "TestPassword123!"
-        
-        // Store password first
-        try manager.savePassword(testPassword)
-        #expect(manager.isPasswordSet() == true, "Password should be set")
-        
-        // Delete password
-        try manager.deletePassword()
-        #expect(manager.isPasswordSet() == false, "Password should not be set after deletion")
-        
-        // Test that getting password after deletion throws error
-        #expect(throws: KeychainError.self) {
-            try manager.getPassword()
-        }
-    }
-    
-    @Test func testPasswordOverwrite() async throws {
-        let testKeychain = TestKeychain()
-        let manager = testKeychain.manager
-        let firstPassword = "FirstPassword123!"
-        let secondPassword = "SecondPassword456!"
-        
-        // Store first password
-        try manager.savePassword(firstPassword)
-        let retrieved1 = try manager.getPassword()
-        #expect(retrieved1 == firstPassword, "First password should be stored correctly")
-        
-        // Overwrite with second password
-        try manager.savePassword(secondPassword)
-        let retrieved2 = try manager.getPassword()
-        #expect(retrieved2 == secondPassword, "Second password should overwrite first")
-        
-        // Cleanup
-        try manager.deletePassword()
     }
     
     // MARK: - Authentication Type Tests
@@ -329,26 +298,11 @@ struct KeychainManagerTests {
     @Test func testKeychainErrorHandling() async throws {
         let testKeychain = TestKeychain()
         let manager = testKeychain.manager
-        
-        // Test getting password when none is set
-        try manager.deletePassword() // Ensure no password is set
-        
-        #expect(throws: KeychainError.self) {
-            try manager.getPassword()
-        }
-        
-        // Test that isPasswordSet returns false when no password
-        #expect(manager.isPasswordSet() == false, "Should return false when no password is set")
-    }
-    
-    @Test func testEmptyPasswordStorageAPIBehavior() async throws {
-        let testKeychain = TestKeychain()
-        let manager = testKeychain.manager
-        
-        // Input validation belongs to the setup UI; the storage API preserves
-        // the exact string it receives.
-            try manager.savePassword("")
-        #expect(try manager.getPassword() == "")
+
+        // Deleting a credential that was never stored is not an error.
+        try manager.deletePassword()
+        try manager.deleteFakePassword()
+        #expect(manager.isPasswordSet() == false, "Should return false when no vault key is stored")
     }
     
     // MARK: - Data Persistence Tests
@@ -356,23 +310,14 @@ struct KeychainManagerTests {
     @Test func testDataPersistence() async throws {
         let testKeychain = TestKeychain()
         let manager = testKeychain.manager
-        let testPassword = "PersistenceTest123!"
-        
-        // Store password and settings
-        try manager.savePassword(testPassword)
+
+        try storeEnvelope(manager, authType: .password)
         manager.setBiometricEnabled(true)
         manager.setLockTimeout(KeychainManager.LockTimeout.oneMinute.rawValue)
-        
-        // Verify persistence (simulate app restart by creating new manager instance)
-        // Note: Since it's a singleton, we test the persistence through the same instance
-        #expect(manager.isPasswordSet() == true, "Password should persist")
+
+        #expect(manager.isPasswordSet() == true, "Vault key should persist")
         #expect(manager.isBiometricEnabled() == true, "Biometric setting should persist")
         #expect(manager.getLockTimeout() == KeychainManager.LockTimeout.oneMinute.rawValue, "Lock timeout should persist")
-        
-        // Cleanup
-        try manager.deletePassword()
-        manager.setBiometricEnabled(false)
-        manager.setLockTimeout(KeychainManager.LockTimeout.thirtySeconds.rawValue)
     }
     
     // MARK: - Performance Tests
@@ -380,45 +325,33 @@ struct KeychainManagerTests {
     @Test func testKeychainPerformance() async throws {
         let testKeychain = TestKeychain()
         let manager = testKeychain.manager
-        let testPassword = "PerformanceTest123!"
+        let payload = Data(repeating: 7, count: 256)
         
         let startTime = CFAbsoluteTimeGetCurrent()
-        
-        // Perform multiple operations
-        for i in 0..<10 {
-            try manager.savePassword("\(testPassword)\(i)")
-            _ = try manager.getPassword()
+        for _ in 0..<10 {
+            try manager.saveKeyMaterialData(payload)
+            _ = try manager.loadKeyMaterialData()
             _ = manager.isPasswordSet()
         }
-        
         let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
         #expect(timeElapsed < 1.0, "Keychain operations should complete within 1 second")
-        
-        // Cleanup
-        try manager.deletePassword()
     }
     
     // MARK: - Security Tests
     
-    @Test func testPasswordSecurity() async throws {
+    @Test func testCredentialsAreNeverStoredReadably() async throws {
         let testKeychain = TestKeychain()
         let manager = testKeychain.manager
-        let testPassword = "SecurePassword123!"
-        
-        // Store password
-        try manager.savePassword(testPassword)
-        
-        // Verify password is not stored in UserDefaults (basic security check)
-        let userDefaults = testKeychain.defaults
-        let allKeys = userDefaults.dictionaryRepresentation().keys
-        
-        for key in allKeys {
-            if let value = userDefaults.object(forKey: key) as? String {
-                #expect(value != testPassword, "Password should not be stored in UserDefaults")
-            }
+        let fake = "DecoyPassword123!"
+
+        try storeEnvelope(manager, authType: .password)
+        try manager.saveFakePassword(fake)
+
+        // The vault credential ("135790") and the decoy appear nowhere in plaintext.
+        let stored = try #require(try manager.loadKeyMaterialData())
+        #expect(stored.range(of: Data("135790".utf8)) == nil)
+        for value in testKeychain.defaults.dictionaryRepresentation().values {
+            #expect((value as? String) != fake)
         }
-        
-        // Cleanup
-        try manager.deletePassword()
     }
-} 
+}

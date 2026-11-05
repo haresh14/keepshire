@@ -13,8 +13,7 @@ struct KeepshireTests {
     @Test func testAuthenticationAndEncryptedFileFlow() throws {
         let dependencies = try IsolatedTestDependencies()
         let password = "IntegrationTest123!"
-        try dependencies.keychainManager.savePassword(password)
-        dependencies.fileStorageManager.setupEncryptionKey(from: password)
+        try dependencies.fileStorageManager.createVault(password: password, authType: .password)
         let original = Data("Authenticated file access test".utf8)
         let item = try dependencies.fileStorageManager.saveFile(data: original, fileName: "auth_test.txt", fileType: "text/plain")
 
@@ -26,11 +25,16 @@ struct KeepshireTests {
     @Test func testAuthenticationTypeFlow() throws {
         let dependencies = try IsolatedTestDependencies()
         let manager = dependencies.keychainManager
-        for (type, credential) in [(AuthenticationType.passcode4, "1234"), (.passcode6, "123456"), (.password, "SecurePassword123!")] {
-            manager.setAuthenticationType(type)
-            try manager.savePassword(credential)
+        let storage = dependencies.fileStorageManager
+        try storage.createVault(password: "1234", authType: .passcode4)
+        #expect(manager.getAuthenticationType() == .passcode4)
+        var current = "1234"
+        for (type, credential) in [(AuthenticationType.passcode6, "123456"), (.password, "SecurePassword123!"), (.passcode4, "4321")] {
+            try storage.changeCredential(from: current, to: credential, authType: type)
             #expect(manager.getAuthenticationType() == type)
-            #expect(try manager.getPassword() == credential)
+            #expect(storage.verifyCredential(credential))
+            #expect(!storage.verifyCredential(current))
+            current = credential
         }
     }
 

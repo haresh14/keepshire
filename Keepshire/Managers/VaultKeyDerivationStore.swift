@@ -14,6 +14,13 @@ protocol VaultKeyDerivationStoring {
     /// Replaces the stored material in one step; a failed write leaves the previous value.
     func saveEnvelope(_ envelope: VaultKeyEnvelope) throws
     func deleteRecord()
+
+    /// A second copy of the vault key that the Secure Enclave releases only after Face ID or Touch ID.
+    func saveBiometricKey(_ keyData: Data) throws
+    /// Blocks while the system shows the biometric prompt; returns nil when no copy is stored.
+    func loadBiometricKey(prompt: String) throws -> Data?
+    func hasBiometricKey() -> Bool
+    func deleteBiometricKey()
 }
 
 extension StoredVaultKeyMaterial {
@@ -31,6 +38,7 @@ extension StoredVaultKeyMaterial {
 
 final class InMemoryVaultKeyDerivationStore: VaultKeyDerivationStoring {
     private var material: StoredVaultKeyMaterial?
+    private var biometricKey: Data?
 
     func loadMaterial() throws -> StoredVaultKeyMaterial? {
         material
@@ -42,6 +50,22 @@ final class InMemoryVaultKeyDerivationStore: VaultKeyDerivationStoring {
 
     func deleteRecord() {
         material = nil
+    }
+
+    func saveBiometricKey(_ keyData: Data) throws {
+        biometricKey = keyData
+    }
+
+    func loadBiometricKey(prompt: String) throws -> Data? {
+        biometricKey
+    }
+
+    func hasBiometricKey() -> Bool {
+        biometricKey != nil
+    }
+
+    func deleteBiometricKey() {
+        biometricKey = nil
     }
 }
 
@@ -66,5 +90,21 @@ final class KeychainVaultKeyDerivationStore: VaultKeyDerivationStoring {
 
     func deleteRecord() {
         keychain.deleteKeyDerivationRecord()
+    }
+
+    func saveBiometricKey(_ keyData: Data) throws {
+        try keychain.saveBiometricVaultKey(keyData)
+    }
+
+    func loadBiometricKey(prompt: String) throws -> Data? {
+        try keychain.loadBiometricVaultKey(prompt: prompt)
+    }
+
+    func hasBiometricKey() -> Bool {
+        keychain.hasBiometricVaultKey()
+    }
+
+    func deleteBiometricKey() {
+        keychain.deleteBiometricVaultKey()
     }
 }

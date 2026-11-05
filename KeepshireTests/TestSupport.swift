@@ -153,9 +153,16 @@ final class FakeFileStorageManager: FileStorageManaging {
         pendingShareImportCalls += 1
         return 0
     }
-    func changeCredential(from oldPassword: String, to newPassword: String, commit: () throws -> Void) throws {
-        try commit()
+    func unlock(password: String) -> Bool { setupEncryptionKey(from: password) }
+    func createVault(password: String, authType: AuthenticationType) throws {
+        encryptionPasswords.append(password)
     }
+    func verifyCredential(_ password: String) -> Bool { encryptionPasswords.contains(password) }
+    func changeCredential(from oldPassword: String, to newPassword: String, authType: AuthenticationType) throws {}
+    var hasBiometricUnlock: Bool { false }
+    func enableBiometricUnlock() throws {}
+    func disableBiometricUnlock() {}
+    func unlockWithBiometrics(prompt: String, completion: @escaping (Bool) -> Void) { completion(false) }
     func toggleFavorite(for vaultItem: VaultItem) { vaultItem.isFavorite.toggle() }
     func fetchFavoriteItems() -> [VaultItem] { [] }
     func renameFile(vaultItem: VaultItem, newFileName: String) throws {}

@@ -177,6 +177,75 @@ class FileStorageManager: FileStorageManaging {
             VaultLog.error("Vault key unavailable; stored files were left untouched")
             return false
         }
+        activate(key)
+        return true
+    }
+
+    /// The lock screen's unlock. Unlike `setupEncryptionKey`, it never creates a vault, so a wrong
+    /// or unreadable state can only ever fail.
+    @discardableResult
+    func unlock(password: String) -> Bool {
+        guard (try? keyDerivationStore.loadMaterial()) != nil else { return false }
+        return setupEncryptionKey(from: password)
+    }
+
+    /// First-run setup: a fresh random vault key, wrapped for `password` together with its type.
+    func createVault(password: String, authType: AuthenticationType) throws {
+        guard try keyDerivationStore.loadMaterial() == nil else {
+            throw FileStorageError.credentialChangeFailed
+        }
+        let key = cryptoService.makeVaultKey()
+        try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [
+            cryptoService.wrap(key, password: password, authType: authType)
+        ]))
+        clearThumbnailCache()
+        activate(key)
+    }
+
+    /// Checks a credential by opening the envelope, with no other effect. Nothing stores the
+    /// credential itself, so this is the only way to check it.
+    func verifyCredential(_ password: String) -> Bool {
+        guard case .envelope(let envelope)? = try? keyDerivationStore.loadMaterial() else { return false }
+        return envelope.wraps.contains { cryptoService.unwrap($0, password: password) != nil }
+    }
+
+    // MARK: - Biometric unlock
+
+    var hasBiometricUnlock: Bool {
+        keyDerivationStore.hasBiometricKey()
+    }
+
+    /// Stores a copy of the unlocked vault key that only the Secure Enclave can release, after
+    /// Face ID or Touch ID. The credential itself never enters this path.
+    func enableBiometricUnlock() throws {
+        guard let encryptionKey else { throw FileStorageError.noEncryptionKey }
+        try keyDerivationStore.saveBiometricKey(encryptionKey.withUnsafeBytes { Data($0) })
+    }
+
+    func disableBiometricUnlock() {
+        keyDerivationStore.deleteBiometricKey()
+    }
+
+    /// Shows the system biometric prompt off the main thread, then unlocks on it.
+    func unlockWithBiometrics(prompt: String, completion: @escaping (Bool) -> Void) {
+        let store = keyDerivationStore
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let keyData = try? store.loadBiometricKey(prompt: prompt)
+            DispatchQueue.main.async {
+                guard let self, let keyData else { return completion(false) }
+                let key = SymmetricKey(data: keyData)
+                // The copy may predate a reset or a restore; it must open what is stored.
+                guard (try? store.loadMaterial()) != nil, self.keyOpensVault(key) else {
+                    return completion(false)
+                }
+                self.clearThumbnailCache()
+                self.activate(key)
+                completion(true)
+            }
+        }
+    }
+
+    private func activate(_ key: SymmetricKey) {
         encryptionKey = key
         // Metadata must be readable before the on-disk migrations inspect stored names.
         metadataSealer.key = key
@@ -187,7 +256,6 @@ class FileStorageManager: FileStorageManaging {
         migrateOnDiskNamesToUUID()
         encryptPlaintextThumbnails()
         removeOrphanedFiles()
-        return true
     }
 
     /// Files and metadata are sealed with one random vault key that never changes. The Keychain
@@ -319,36 +387,30 @@ class FileStorageManager: FileStorageManaging {
         return imported
     }
     
-    /// Re-wraps the vault key for `newPassword`; no file or metadata blob is rewritten, so a
-    /// failure at any point leaves the vault exactly as readable as before.
-    ///
-    /// `commit` stores the new credential. The envelope holds both wraps until it returns, so
-    /// whichever credential the Keychain holds after a crash or error still opens the vault.
-    func changeCredential(from oldPassword: String, to newPassword: String, commit: () throws -> Void) throws {
+    /// Re-wraps the vault key for `newPassword`. No file or metadata blob is rewritten, and the
+    /// new wrap, with its type, replaces the old one in a single Keychain update: after any failure
+    /// or crash exactly one credential opens the vault, and the keypad matches it.
+    func changeCredential(from oldPassword: String, to newPassword: String, authType: AuthenticationType) throws {
         let (vaultKey, oldWrap) = try currentWrap(for: oldPassword)
         if let encryptionKey, !encryptionKey.matches(vaultKey) {
             throw FileStorageError.credentialChangeFailed
         }
-        let newWrap = try cryptoService.wrap(vaultKey, password: newPassword)
+        let newWrap = try cryptoService.wrap(vaultKey, password: newPassword, authType: authType)
         guard cryptoService.unwrap(newWrap, password: newPassword)?.matches(vaultKey) == true else {
             throw FileStorageError.credentialChangeFailed
         }
 
         do {
-            try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [newWrap, oldWrap]))
-            guard case .envelope(let saved)? = try keyDerivationStore.loadMaterial(),
-                  saved.wraps.contains(newWrap) else {
+            try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [newWrap]))
+            guard case .envelope(let saved)? = try keyDerivationStore.loadMaterial(), saved.wraps == [newWrap] else {
                 throw FileStorageError.credentialChangeFailed
             }
-            try commit()
         } catch {
-            // Both wraps may still be stored; the next unlock keeps only the one matching the Keychain.
-            VaultLog.error("Credential change failed before it was committed: \(error)")
+            // A failed update leaves the previous value; putting it back covers a bad read-back.
+            try? keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [oldWrap]))
+            VaultLog.error("Credential change failed: \(error)")
             throw FileStorageError.credentialChangeFailed
         }
-
-        // The new credential is stored. Dropping the old wrap is cleanup; if it fails, the next unlock does it.
-        try? keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [newWrap]))
     }
 
     private func currentWrap(for password: String) throws -> (SymmetricKey, VaultKeyWrap) {

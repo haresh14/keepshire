@@ -103,18 +103,20 @@ final class AuthenticationCoordinator: ObservableObject {
         }
     }
 
+    /// The setup screen has already created the vault and unlocked it.
     func handlePasscodeSet() {
         isPasswordSet = true
         isAuthenticated = true
-        setupEncryptionKey()
+        importSharedFilesIfUnlocked()
     }
 
+    /// The lock screen has already checked the credential and, for a real login, unlocked the vault.
     func handleAuthentication() {
         isAuthenticated = true
         shouldShowPasscode = false
         biometricManager.resetFailureCount()
         fileStorageManager.sweepTemporaryShareFiles()
-        setupEncryptionKey()
+        didUnlock()
     }
 
     func handleSecurityLockTrigger() {
@@ -137,7 +139,9 @@ final class AuthenticationCoordinator: ObservableObject {
     }
 
     private func checkBiometricAuthentication() {
-        guard keychainManager.isBiometricEnabled(), biometricManager.canUseBiometrics() else {
+        guard keychainManager.isBiometricEnabled(),
+              biometricManager.canUseBiometrics(),
+              fileStorageManager.hasBiometricUnlock else {
             shouldShowPasscode = true
             return
         }
@@ -147,32 +151,27 @@ final class AuthenticationCoordinator: ObservableObject {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self = self else { return }
-            self.biometricManager.authenticateWithBiometrics(reason: "Unlock your vault") { [weak self] success, error in
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    if success {
-                        self.keychainManager.clearLastBackgroundTime()
-                        self.isAuthenticated = true
-                        self.isCheckingBiometric = false
-                        self.loginStateManager.setLoginState(isFakeLogin: false)
-                        self.setupEncryptionKey()
-                    } else {
-                        self.isCheckingBiometric = false
-                        self.shouldShowPasscode = true
-                        if let error = error {
-                            VaultLog.debug("DEBUG: Biometric authentication failed: \(error.localizedDescription)")
-                        }
-                    }
+            // The Secure Enclave runs the biometric check and only then releases the vault key.
+            self.fileStorageManager.unlockWithBiometrics(prompt: "Unlock your vault") { [weak self] success in
+                guard let self = self else { return }
+                self.isCheckingBiometric = false
+                guard success else {
+                    self.shouldShowPasscode = true
+                    return
                 }
+                self.keychainManager.clearLastBackgroundTime()
+                self.isAuthenticated = true
+                self.loginStateManager.setLoginState(isFakeLogin: false)
+                self.didUnlock()
             }
         }
     }
 
-    private func setupEncryptionKey() {
-        if let password = try? keychainManager.getPassword() {
-            fileStorageManager.setupEncryptionKey(from: password)
-            importSharedFilesIfUnlocked()
-        }
+    private func didUnlock() {
+        UnlockThrottle.shared.recordSuccess()
+        // Builds before the key envelope stored the passcode itself; it must not outlive an upgrade.
+        try? keychainManager.deletePassword()
+        importSharedFilesIfUnlocked()
     }
 
     private func importSharedFilesIfUnlocked() {

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import LocalAuthentication
 import Security
 
 enum KeychainError: Error {
@@ -39,16 +40,6 @@ enum AuthenticationType: String, CaseIterable {
         case .password: return nil
         }
     }
-
-    /// Whether this type's input UI can type `credential`. A password field accepts anything.
-    func canEnter(_ credential: String) -> Bool {
-        guard let digitCount else { return true }
-        return credential.count == digitCount && credential.allSatisfy(\.isNumber)
-    }
-
-    static func inferred(from credential: String) -> AuthenticationType {
-        [.passcode4, .passcode6].first { $0.canEnter(credential) } ?? .password
-    }
 }
 
 class KeychainManager: KeychainManaging {
@@ -59,6 +50,8 @@ class KeychainManager: KeychainManaging {
     private let passwordKey = "userPassword"
     private let fakePasswordKey = "fakePassword"
     private let keyDerivationAccount = "vaultKeyDerivation"
+    private let biometricKeyAccount = "vaultKeyBiometric"
+    private let unlockThrottleAccount = "unlockThrottle"
     private let biometricEnabledKey = "biometricEnabled"
     private let authTypeKey = "authenticationType"
     
@@ -73,185 +66,78 @@ class KeychainManager: KeychainManaging {
         self.defaults = defaults
     }
     
-    // MARK: - Password Management
-    
-    func savePassword(_ password: String) throws {
-        guard let passwordData = password.data(using: .utf8) else {
-            throw KeychainError.invalidData
-        }
-        
-        try upsert(passwordData, account: passwordKey)
-    }
-    
-    func getPassword() throws -> String {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: passwordKey,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecReturnData as String: true
-        ]
-        
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
-        guard status == errSecSuccess else {
-            if status == errSecItemNotFound {
-                throw KeychainError.noPassword
-            }
-            throw KeychainError.unknown(status)
-        }
-        
-        guard let data = result as? Data,
-              let password = String(data: data, encoding: .utf8) else {
-            throw KeychainError.invalidData
-        }
-        
-        return password
-    }
-    
+    // MARK: - Credential
+
+    /// Builds before the vault-key envelope kept the passcode itself here. It is only ever
+    /// deleted now: the envelope is the sole stored form of the credential.
     func deletePassword() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: passwordKey
-        ]
-        
-        let status = SecItemDelete(query as CFDictionary)
-        
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.unknown(status)
-        }
+        try delete(account: passwordKey)
     }
-    
-    /// Only a missing item means "not set". A locked or busy Keychain must not send an existing
-    /// user back to first-run setup, where a new passcode would replace the one their vault key needs.
+
+    /// A vault exists once its key envelope does. Only a missing item means "not set": a locked
+    /// or busy Keychain must not send an existing user back to first-run setup.
     func isPasswordSet() -> Bool {
         do {
-            _ = try getPassword()
-            return true
-        } catch KeychainError.noPassword {
-            return false
+            return try loadKeyMaterialData() != nil
         } catch {
             return true
         }
     }
-    
+
     // MARK: - Fake Password Management
-    
+
+    /// Stores a one-way verifier, never the decoy credential itself.
     func saveFakePassword(_ password: String) throws {
-        guard let passwordData = password.data(using: .utf8) else {
-            throw KeychainError.invalidData
-        }
-        
-        // Validate that fake password is different from main password
-        if let mainPassword = try? getPassword(), mainPassword == password {
-            throw KeychainError.duplicateEntry
-        }
-        
-        try upsert(passwordData, account: fakePasswordKey)
+        let verifier = try VaultCryptoService().makeVerifier(for: password)
+        try upsert(JSONEncoder().encode(verifier), account: fakePasswordKey)
     }
-    
-    func getFakePassword() throws -> String {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: fakePasswordKey,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecReturnData as String: true
-        ]
-        
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
-        guard status == errSecSuccess else {
-            if status == errSecItemNotFound {
-                throw KeychainError.noPassword
-            }
-            throw KeychainError.unknown(status)
-        }
-        
-        guard let data = result as? Data,
-              let password = String(data: data, encoding: .utf8) else {
-            throw KeychainError.invalidData
-        }
-        
-        return password
-    }
-    
-    func deleteFakePassword() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: fakePasswordKey
-        ]
-        
-        let status = SecItemDelete(query as CFDictionary)
-        
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.unknown(status)
-        }
-    }
-    
-    func isFakePasswordSet() -> Bool {
-        do {
-            _ = try getFakePassword()
-            return true
-        } catch {
-            return false
-        }
-    }
-    
+
     func setFakePassword(_ password: String) throws {
         try saveFakePassword(password)
     }
-    
-    func validatePassword(_ inputPassword: String) -> (isValid: Bool, isFakeLogin: Bool) {
-        do {
-            let mainPassword = try getPassword()
-            if inputPassword == mainPassword {
-                return (true, false)
-            }
-            
-            if isFakePasswordSet() {
-                let fakePassword = try getFakePassword()
-                if inputPassword == fakePassword {
-                    return (true, true)
-                }
-            }
-            
-            return (false, false)
-        } catch {
-            return (false, false)
+
+    func verifyFakePassword(_ password: String) -> Bool {
+        guard let data = try? loadData(account: fakePasswordKey),
+              let verifier = try? JSONDecoder().decode(CredentialVerifier.self, from: data) else {
+            return false
         }
+        return VaultCryptoService().matches(password, verifier: verifier)
     }
-    
+
+    func deleteFakePassword() throws {
+        try delete(account: fakePasswordKey)
+    }
+
+    func isFakePasswordSet() -> Bool {
+        (try? loadData(account: fakePasswordKey)) != nil
+    }
+
     // MARK: - Authentication Type Management
-    
+
+    /// Kept as a fallback only; the type stored inside the key envelope wins.
     func setAuthenticationType(_ type: AuthenticationType) {
         defaults.set(type.rawValue, forKey: authTypeKey)
     }
-    
-    /// The type is kept in UserDefaults and the credential in the Keychain, so a crash between the
-    /// two writes can leave a keypad that cannot enter the stored credential. Whenever they disagree,
-    /// the credential wins and the type is repaired, so the lock screen can always accept it.
+
+    /// Read from the envelope, which stores the type in the same atomic write as the credential,
+    /// so the lock screen's keypad can always enter whatever credential is stored.
     func getAuthenticationType() -> AuthenticationType {
-        let stored = defaults.string(forKey: authTypeKey).flatMap(AuthenticationType.init(rawValue:))
-        guard let password = try? getPassword() else {
-            return stored ?? .passcode4 // Default to 4-digit passcode
-        }
-        if let stored, stored.canEnter(password) {
-            return stored
-        }
-        let repaired = AuthenticationType.inferred(from: password)
-        setAuthenticationType(repaired)
-        return repaired
+        envelopeAuthenticationType()
+            ?? defaults.string(forKey: authTypeKey).flatMap(AuthenticationType.init(rawValue:))
+            ?? .passcode4 // Default to 4-digit passcode
     }
-    
+
     func isAuthenticationTypeSet() -> Bool {
-        return defaults.string(forKey: authTypeKey) != nil
+        envelopeAuthenticationType() != nil || defaults.string(forKey: authTypeKey) != nil
     }
-    
+
+    private func envelopeAuthenticationType() -> AuthenticationType? {
+        guard let data = try? loadKeyMaterialData(),
+              case .envelope(let envelope)? = StoredVaultKeyMaterial.decode(data),
+              envelope.wraps.count == 1 else { return nil }
+        return envelope.wraps[0].authType.flatMap(AuthenticationType.init(rawValue:))
+    }
+
     // MARK: - Biometric Settings
     
     func setBiometricEnabled(_ enabled: Bool) {
@@ -343,10 +229,14 @@ class KeychainManager: KeychainManaging {
 
     /// Returns nil only when the item does not exist; every other failure throws.
     func loadKeyMaterialData() throws -> Data? {
+        try loadData(account: keyDerivationAccount)
+    }
+
+    private func loadData(account: String) throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: keyDerivationAccount,
+            kSecAttrAccount as String: account,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true
         ]
@@ -359,6 +249,18 @@ class KeychainManager: KeychainManaging {
             throw KeychainError.unknown(status)
         }
         return data
+    }
+
+    private func delete(account: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainError.unknown(status)
+        }
     }
 
     func saveKeyDerivationRecord(_ record: VaultKeyDerivationRecord) throws {
@@ -399,6 +301,97 @@ class KeychainManager: KeychainManaging {
         SecItemDelete(query as CFDictionary)
     }
 
+    // MARK: - Biometric vault key
+
+    /// The Secure Enclave releases this item only after Face ID or Touch ID, and drops it when the
+    /// enrolled biometrics change. Nothing app-side can skip that check.
+    func saveBiometricVaultKey(_ keyData: Data) throws {
+        var error: Unmanaged<CFError>?
+        guard let access = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            .biometryCurrentSet,
+            &error
+        ) else {
+            throw KeychainError.invalidData
+        }
+        // Items guarded by biometry cannot be updated without a prompt; replacing one only ever
+        // costs Face ID unlock, never vault data, so delete-then-add is safe here.
+        deleteBiometricVaultKey()
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: biometricKeyAccount,
+            kSecValueData as String: keyData,
+            kSecAttrAccessControl as String: access
+        ]
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw KeychainError.unknown(status)
+        }
+    }
+
+    /// Blocks while the system shows the biometric prompt. The match is required up front and the
+    /// same context then opens the item, so a missing face fails here even where the Keychain's
+    /// own check is not enforced (the Simulator has no Secure Enclave); on a device both apply.
+    func loadBiometricVaultKey(prompt: String) throws -> Data? {
+        let context = LAContext()
+        context.localizedReason = prompt
+        let matched = DispatchSemaphore(value: 0)
+        var didMatch = false
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: prompt) { success, _ in
+            didMatch = success
+            matched.signal()
+        }
+        matched.wait()
+        guard didMatch else { throw KeychainError.noPassword }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: biometricKeyAccount,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecReturnData as String: true,
+            kSecUseAuthenticationContext as String: context
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound {
+            return nil
+        }
+        guard status == errSecSuccess, let data = result as? Data else {
+            throw KeychainError.unknown(status)
+        }
+        return data
+    }
+
+    func hasBiometricVaultKey() -> Bool {
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: biometricKeyAccount,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationContext as String: context
+        ]
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        return status == errSecSuccess || status == errSecInteractionNotAllowed
+    }
+
+    func deleteBiometricVaultKey() {
+        try? delete(account: biometricKeyAccount)
+    }
+
+    // MARK: - Unlock throttle
+
+    func loadUnlockThrottleData() -> Data? {
+        try? loadData(account: unlockThrottleAccount)
+    }
+
+    func saveUnlockThrottleData(_ data: Data) {
+        try? upsert(data, account: unlockThrottleAccount)
+    }
+
     func clearAllKeychainData() {
         VaultLog.debug("DEBUG: Clearing all keychain data...")
         
@@ -409,6 +402,8 @@ class KeychainManager: KeychainManaging {
         try? deleteFakePassword()
 
         deleteKeyDerivationRecord()
+        deleteBiometricVaultKey()
+        try? delete(account: unlockThrottleAccount)
         
         VaultLog.debug("DEBUG: Keychain data cleared")
     }

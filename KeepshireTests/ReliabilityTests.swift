@@ -115,9 +115,39 @@ struct ReliabilityTests {
             .appendingPathComponent(bad.storedBlobName ?? "")
         try Data("not-a-sealed-box".utf8).write(to: blob)
 
-        try manager.changeCredential(from: "old-pass", to: "new-pass") {}
+        try manager.changeCredential(from: "old-pass", to: "new-pass", authType: .password)
 
         #expect(manager.setupEncryptionKey(from: "new-pass"))
         #expect(try manager.loadFile(vaultItem: good) == Data("keep me".utf8))
+    }
+
+    @Test func throttleWaitsGrowAndSuccessClearsThem() {
+        var stored: Data?
+        let throttle = UnlockThrottle(load: { stored }, save: { stored = $0 })
+        let start = Date(timeIntervalSince1970: 1_000_000)
+
+        for _ in 0..<4 {
+            #expect(throttle.recordFailure(now: start) == nil)
+        }
+        #expect(throttle.remainingLockout(now: start) == nil)
+        #expect(throttle.recordFailure(now: start) == 30)
+        #expect(throttle.remainingLockout(now: start.addingTimeInterval(10)) == 20)
+        #expect(throttle.remainingLockout(now: start.addingTimeInterval(31)) == nil)
+        #expect(throttle.recordFailure(now: start) == 60)
+        #expect(throttle.recordFailure(now: start) == 300)
+
+        // A fresh instance over the same storage, as after a relaunch, keeps the lockout.
+        let relaunched = UnlockThrottle(load: { stored }, save: { stored = $0 })
+        #expect(relaunched.remainingLockout(now: start) == 300)
+
+        relaunched.recordSuccess()
+        #expect(relaunched.remainingLockout(now: start) == nil)
+        #expect(relaunched.recordFailure(now: start) == nil)
+    }
+
+    @Test func throttleCapsAtOneHour() {
+        #expect(UnlockThrottle.lockout(afterFailures: 8) == 15 * 60)
+        #expect(UnlockThrottle.lockout(afterFailures: 9) == 60 * 60)
+        #expect(UnlockThrottle.lockout(afterFailures: 50) == 60 * 60)
     }
 }

@@ -42,7 +42,7 @@ struct SettingsView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
-    @State private var biometricEnabled = KeychainManager.shared.isBiometricEnabled()
+    @State private var biometricEnabled = KeychainManager.shared.isBiometricEnabled() && FileStorageManager.shared.hasBiometricUnlock
     @State private var lockTimeout = KeychainManager.shared.getLockTimeout()
     @State private var showBiometricAlert = false
     @State private var showChangeAuthSheet = false
@@ -360,11 +360,19 @@ struct SettingsView: View {
     }
 
     private func handleBiometricToggle(_ isEnabled: Bool) {
-        if isEnabled && !BiometricAuthManager.shared.canUseBiometrics() {
+        guard isEnabled else {
+            FileStorageManager.shared.disableBiometricUnlock()
+            KeychainManager.shared.setBiometricEnabled(false)
+            return
+        }
+        // Face ID unlock needs its own Secure Enclave copy of the vault key; without one, stay off.
+        do {
+            guard BiometricAuthManager.shared.canUseBiometrics() else { throw FileStorageError.noEncryptionKey }
+            try FileStorageManager.shared.enableBiometricUnlock()
+            KeychainManager.shared.setBiometricEnabled(true)
+        } catch {
             biometricEnabled = false
             showBiometricAlert = true
-        } else {
-            KeychainManager.shared.setBiometricEnabled(isEnabled)
         }
     }
 

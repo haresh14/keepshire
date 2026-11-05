@@ -21,7 +21,7 @@ struct AuthenticationCoordinatorTests {
         #expect(coordinator.shouldShowPasscode)
     }
 
-    @Test func passcodeCompletionAuthenticatesAndSetsEncryptionKey() {
+    @Test func passcodeCompletionAuthenticatesWithoutReadingAStoredCredential() {
         let keychain = FakeAuthenticationKeychain()
         keychain.password = "vault-password"
         let storage = FakeFileStorageManager(coreDataManager: TestCoreDataStore.reset())
@@ -31,8 +31,20 @@ struct AuthenticationCoordinatorTests {
 
         #expect(coordinator.isPasswordSet)
         #expect(coordinator.isAuthenticated)
-        #expect(storage.encryptionPasswords == ["vault-password"])
+        // The setup screen unlocked the vault; nothing stored is read back to do it again.
+        #expect(storage.encryptionPasswords.isEmpty)
         #expect(storage.pendingShareImportCalls == 1)
+    }
+
+    @Test func unlockingRemovesAPasscodeLeftByEarlierBuilds() {
+        let keychain = FakeAuthenticationKeychain()
+        keychain.password = "vault-password"
+        let storage = FakeFileStorageManager(coreDataManager: TestCoreDataStore.reset())
+        let coordinator = makeCoordinator(keychain: keychain, storage: storage)
+
+        coordinator.handleAuthentication()
+
+        #expect(keychain.didDeleteLegacyPassword)
     }
 
     @Test func backgroundAndForegroundPreservePrivacyAndLockBehavior() {
@@ -114,17 +126,12 @@ private final class FakeAuthenticationKeychain: KeychainManaging {
     var requireAuthentication = false
     var didSetBackgroundTime = false
 
-    func savePassword(_ password: String) throws { self.password = password }
-    func getPassword() throws -> String {
-        guard let password = password else { throw KeychainError.noPassword }
-        return password
-    }
-    func deletePassword() throws { password = nil }
-    func validatePassword(_ password: String) -> (isValid: Bool, isFakeLogin: Bool) {
-        (password == self.password, false)
-    }
+    var didDeleteLegacyPassword = false
+
+    func deletePassword() throws { didDeleteLegacyPassword = true }
     func isPasswordSet() -> Bool { password != nil }
     func setFakePassword(_ password: String) throws {}
+    func verifyFakePassword(_ password: String) -> Bool { false }
     func deleteFakePassword() throws {}
     func isFakePasswordSet() -> Bool { false }
     func setBiometricEnabled(_ enabled: Bool) { biometricEnabled = enabled }

@@ -180,8 +180,7 @@ struct PasscodeSetupView: View {
             // Save fake passcode
             do {
                 // Validate fake passcode is different from main passcode
-                let mainPassword = try KeychainManager.shared.getPassword()
-                if passcode == mainPassword {
+                if FileStorageManager.shared.verifyCredential(passcode) {
                     showError(message: "Fake passcode must be different from your main passcode")
                     passcode = ""
                     confirmPasscode = ""
@@ -204,7 +203,7 @@ struct PasscodeSetupView: View {
                 if let saveCredential {
                     try saveCredential(passcode)
                 } else {
-                    try KeychainManager.shared.savePassword(passcode)
+                    try FileStorageManager.shared.createVault(password: passcode, authType: authType)
                     KeychainManager.shared.setAuthenticationType(authType)
                 }
                 onPasscodeSet()

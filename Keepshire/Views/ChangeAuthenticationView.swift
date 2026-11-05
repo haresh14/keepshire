@@ -196,25 +196,31 @@ struct ChangeAuthenticationView: View {
     // MARK: - Actions
     
     private func verifyCurrentPassword() {
-        do {
-            let savedPassword = try KeychainManager.shared.getPassword()
-            let cleanCurrentPassword = currentPassword.trimmingCharacters(in: .whitespacesAndNewlines)
-            let cleanSavedPassword = savedPassword.trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            if cleanCurrentPassword == cleanSavedPassword {
-                verifiedOldPassword = savedPassword
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isCurrentPasswordVerified = true
-                }
-            } else {
-                let type = currentAuthType.isPasscode ? "passcode" : "password"
-                showError(message: "Incorrect \(type)")
-                currentPassword = ""
-            }
-        } catch {
-            let type = currentAuthType.isPasscode ? "passcode" : "password"
-            showError(message: "Failed to verify \(type)")
+        let throttle = UnlockThrottle.shared
+        if let remaining = throttle.remainingLockout() {
+            showError(message: UnlockThrottle.message(for: remaining))
+            currentPassword = ""
+            return
         }
+
+        // Setup stores passwords trimmed, so a stray space typed here still matches.
+        let candidates = [currentPassword, currentPassword.trimmingCharacters(in: .whitespacesAndNewlines)]
+        if let match = candidates.first(where: { FileStorageManager.shared.verifyCredential($0) }) {
+            throttle.recordSuccess()
+            verifiedOldPassword = match
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isCurrentPasswordVerified = true
+            }
+            return
+        }
+
+        let type = currentAuthType.isPasscode ? "passcode" : "password"
+        if let wait = throttle.recordFailure() {
+            showError(message: UnlockThrottle.message(for: wait))
+        } else {
+            showError(message: "Incorrect \(type)")
+        }
+        currentPassword = ""
     }
     
     private func proceedToNewAuth() {
@@ -233,14 +239,12 @@ struct ChangeAuthenticationView: View {
     
     // MARK: - Credential Change
 
-    /// Files are sealed with a vault key that never changes; this only re-wraps that key.
-    /// The new credential reaches the Keychain inside `changeCredential`, after the new wrap
-    /// is stored, so no failure can leave a credential that does not open the vault.
+    /// Files are sealed with a vault key that never changes; this only re-wraps that key. The new
+    /// wrap and its type replace the old ones in one Keychain write, so no failure can leave a
+    /// credential that does not open the vault or a keypad that cannot enter it.
     private func commitCredential(_ newPassword: String, authType: AuthenticationType) throws {
-        try FileStorageManager.shared.changeCredential(from: verifiedOldPassword, to: newPassword) {
-            try KeychainManager.shared.savePassword(newPassword)
-            KeychainManager.shared.setAuthenticationType(authType)
-        }
+        try FileStorageManager.shared.changeCredential(from: verifiedOldPassword, to: newPassword, authType: authType)
+        KeychainManager.shared.setAuthenticationType(authType)
     }
 
     private func finishCredentialChange() {
