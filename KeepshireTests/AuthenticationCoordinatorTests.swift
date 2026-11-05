@@ -21,6 +21,20 @@ struct AuthenticationCoordinatorTests {
         #expect(coordinator.shouldShowPasscode)
     }
 
+    @Test func aSavedLockTypeWithoutAVaultStartsSetup() {
+        // As after a restore to a new device: settings come back, the Keychain vault does not.
+        let keychain = FakeAuthenticationKeychain()
+        keychain.authenticationType = .passcode4
+        let storage = FakeFileStorageManager(coreDataManager: TestCoreDataStore.reset())
+        let coordinator = makeCoordinator(keychain: keychain, storage: storage)
+
+        coordinator.handleOnAppear()
+
+        #expect(!coordinator.isPasswordSet)
+        #expect(!coordinator.isAuthTypeSet)
+        #expect(!coordinator.shouldShowPasscode)
+    }
+
     @Test func passcodeCompletionAuthenticatesWithoutReadingAStoredCredential() {
         let keychain = FakeAuthenticationKeychain()
         keychain.password = "vault-password"

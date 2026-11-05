@@ -44,15 +44,10 @@ struct ContentView: View {
     
     @ViewBuilder
     private var mainContent: some View {
-        if !authenticationCoordinator.isAuthTypeSet {
-            // First time setup - choose auth type with native navigation
+        if !authenticationCoordinator.isAuthTypeSet || !authenticationCoordinator.isPasswordSet {
+            // No vault yet, or its Keychain item is gone: choose a lock and create one.
             AuthTypeSelectionView { authType in
                 authenticationCoordinator.handleAuthTypeSelected(authType)
-            }
-        } else if !authenticationCoordinator.isPasswordSet {
-            // This should not happen with the new flow, but keeping as fallback
-            PasscodeView(isSettingPasscode: true) {
-                authenticationCoordinator.handlePasscodeSet()
             }
         } else if !authenticationCoordinator.isAuthenticated {
             if authenticationCoordinator.isCheckingBiometric {

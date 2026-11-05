@@ -38,7 +38,9 @@ final class AuthenticationCoordinator: ObservableObject {
 
     func handleOnAppear() {
         isPasswordSet = keychainManager.isPasswordSet()
-        isAuthTypeSet = keychainManager.isAuthenticationTypeSet()
+        // The lock type is a setting, which a restore to a new device brings back without the
+        // Keychain vault it describes. Without a vault there is nothing to unlock: start setup.
+        isAuthTypeSet = isPasswordSet && keychainManager.isAuthenticationTypeSet()
 
         // Preserve migration for existing users who predate authentication type storage.
         if isPasswordSet && !isAuthTypeSet {
