@@ -3,11 +3,12 @@ Keepshire is a private vault for the photos, videos, audio and documents you don
 LOCKED THE WAY YOU WANT
 • Choose a 4-digit passcode, 6-digit passcode, or a full password
 • Optional Face ID or Touch ID
+• Optional recovery key: the only way back in if you forget your passcode
 • Auto-lock when you leave the app: immediately, after a few seconds or minutes, or never
 • The App Switcher shows a cover instead of your files
 
 ENCRYPTED ON YOUR DEVICE
-• Every file and thumbnail is encrypted with AES-GCM using a key derived from your passcode or password
+• Every file and thumbnail is encrypted with AES-GCM under a random key that only your passcode, Face ID or recovery key can unlock
 • File names, types and sizes are encrypted too
 • Vault files are excluded from iCloud and computer backups
 • No analytics, no ads, no tracking
@@ -35,7 +36,7 @@ EXTRA PROTECTION
 • Shake or flip your phone to lock instantly
 • Decoy passcode that opens an empty vault
 
-Important: there is no back door. If you forget your vault passcode or password, your files cannot be recovered — not by us, not by anyone.
+Important: there is no back door. If you forget your passcode, only your recovery key can open the vault. Without either, your files cannot be recovered — not by us, not by anyone.
 
 Privacy policy: https://keepshire.haresh.dev/privacy
 Support: https://keepshire.haresh.dev/support

@@ -32,12 +32,13 @@
     </header>
 
     <h2>Forgotten passcode or password</h2>
-    <p>There is no reset, iCloud recovery, or back door. If you forget the real vault credential, the files stay unreadable. Reinstalling Keepshire starts a new empty vault; it does not unlock the old one.</p>
+    <p>If you saved a recovery key, tap <strong>Forgot passcode?</strong> on the lock screen, enter the key, and choose a new passcode or password. Your files stay as they are. While the vault is unlocked, you can create a new key or turn it off in Settings → Recovery Key.</p>
+    <p>There is no other reset, iCloud recovery, or back door, and Keepshire cannot see or resend your recovery key. Without the passcode and the recovery key, the files stay unreadable. Reinstalling Keepshire starts a new empty vault; it does not unlock the old one.</p>
 
     <h2>Unlock and Face ID</h2>
     <ul>
       <li>Cancel Face ID / Touch ID to type the vault passcode or password.</li>
-      <li>After three failed biometric attempts, wait 30 seconds, then try again or use the vault credential.</li>
+      <li>After five wrong passcodes, Keepshire makes you wait before the next try, starting at 30 seconds and growing to an hour. The wait continues if you close the app. Recovery key attempts count the same way.</li>
       <li>Keepshire never asks for the iPhone passcode as the vault password.</li>
     </ul>
 
@@ -54,7 +55,7 @@
     <p>The fake passcode or password opens an empty UI so someone watching the phone can be shown an unused app. It does not create a second encrypted vault and does not hide files from a backup or a filesystem copy.</p>
 
     <h2>Contact</h2>
-    <p>Email <a href="mailto:hello@haresh.dev?subject=Keepshire%20support">hello@haresh.dev</a> with your iOS version and what you were doing. Do not send vault files, passcodes, pairing codes, or certificate fingerprints in email.</p>
+    <p>Email <a href="mailto:hello@haresh.dev?subject=Keepshire%20support">hello@haresh.dev</a> with your iOS version and what you were doing. Do not send vault files, passcodes, recovery keys, pairing codes, or certificate fingerprints in email.</p>
   </article>
 
   <footer class="site-footer">
