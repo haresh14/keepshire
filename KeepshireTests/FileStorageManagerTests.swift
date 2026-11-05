@@ -188,6 +188,47 @@ struct FileStorageManagerTests {
         }
     }
 
+    @Test func testEncryptionKeyMigrationSurvivesMissingBlobAndKeepsMetadata() async throws {
+        let storage = try makeStorage()
+        let manager = storage.fileStorageManager
+        let data = Data("kept payload".utf8)
+        manager.setupEncryptionKey(from: "old-passcode")
+        let kept = try manager.saveFile(data: data, fileName: "kept.txt", fileType: "text/plain")
+        let orphan = try manager.saveFile(data: Data("gone".utf8), fileName: "gone.txt", fileType: "text/plain")
+        try FileManager.default.removeItem(at: storage.rootURL
+            .appendingPathComponent("Vault")
+            .appendingPathComponent(orphan.storedBlobName ?? ""))
+
+        try await manager.migrateFilesToNewEncryptionKey(
+            oldPassword: "old-passcode",
+            newPassword: "new-passcode"
+        ) { _, _ in }
+
+        manager.setupEncryptionKey(from: "new-passcode")
+        #expect(try manager.loadFile(vaultItem: kept) == data)
+        #expect(kept.fileName == "kept.txt")
+        #expect(kept.fileSize == Int64(data.count))
+    }
+
+    @Test func testEncryptionKeyMigrationRejectsWrongOldPasswordWithoutTouchingFiles() async throws {
+        let storage = try makeStorage()
+        let manager = storage.fileStorageManager
+        let data = Data("untouched".utf8)
+        manager.setupEncryptionKey(from: "old-passcode")
+        let item = try manager.saveFile(data: data, fileName: "untouched.txt", fileType: "text/plain")
+
+        await #expect(throws: FileStorageError.self) {
+            try await manager.migrateFilesToNewEncryptionKey(
+                oldPassword: "old-passcode ",
+                newPassword: "new-passcode"
+            ) { _, _ in }
+        }
+
+        manager.setupEncryptionKey(from: "old-passcode")
+        #expect(try manager.loadFile(vaultItem: item) == data)
+        #expect(item.fileSize == Int64(data.count))
+    }
+
     @Test func testLegacySHA256VaultUpgradesToPBKDF2() async throws {
         let storage = try makeStorage()
         let manager = storage.fileStorageManager

@@ -244,6 +244,11 @@ class FileStorageManager: FileStorageManaging {
         VaultLog.debug("DEBUG: Starting file migration from old key to new key")
         
         let oldKey = deriveKey(for: oldPassword)
+        // A wrong old key would leave every file and its sealed metadata unreadable, so refuse
+        // before touching anything unless it is the key the vault is unlocked with right now.
+        if let encryptionKey, !encryptionKey.matches(oldKey) {
+            throw FileStorageError.migrationFailed
+        }
         let newRecord = cryptoService.makeRecord()
         let newKey = try cryptoService.key(from: newPassword, record: newRecord)
         
@@ -299,8 +304,10 @@ class FileStorageManager: FileStorageManaging {
         oldKey: SymmetricKey,
         newKey: SymmetricKey
     ) throws -> [String] {
+        // A row whose blob is already gone has nothing to re-encrypt; failing here would
+        // abort the whole vault after the new credential is already saved.
         guard let sourceName = existingVaultFileName(for: vaultItem) else {
-            throw FileStorageError.migrationFailed
+            return []
         }
         if sourceName.hasPrefix(".") || sourceName == ".DS_Store" {
             return []
@@ -317,8 +324,11 @@ class FileStorageManager: FileStorageManaging {
            encryptedThumbnailStore.exists(fileName: destName)
             || vaultItem.storedThumbnailCandidates.contains(where: { encryptedThumbnailStore.exists(fileName: $0) }) {
             let stagedThumb = destName + ".migrating"
-            try stageThumbnail(vaultItem, destName: destName, stagedName: stagedThumb, oldKey: oldKey, newKey: newKey)
-            staged.append(stagedThumb)
+            // Thumbnails are a cache; an unreadable one must not block re-encrypting the file itself.
+            if (try? stageThumbnail(vaultItem, destName: destName, stagedName: stagedThumb, oldKey: oldKey, newKey: newKey)) != nil,
+               encryptedThumbnailStore.exists(fileName: stagedThumb) {
+                staged.append(stagedThumb)
+            }
         }
         return staged
     }
@@ -1165,3 +1175,9 @@ enum FileStorageError: LocalizedError, Equatable {
         }
     }
 } 
+
+private extension SymmetricKey {
+    func matches(_ other: SymmetricKey) -> Bool {
+        withUnsafeBytes { Data($0) } == other.withUnsafeBytes { Data($0) }
+    }
+}

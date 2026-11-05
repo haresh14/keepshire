@@ -22,7 +22,8 @@ struct ChangeAuthenticationView: View {
     @State private var showMigrationProgress: Bool = false
     @State private var migrationProgress: Int = 0
     @State private var migrationTotal: Int = 0
-    @State private var newPasswordForMigration: String = ""
+    /// The stored credential the vault key is derived from; the typed text may differ in whitespace.
+    @State private var verifiedOldPassword: String = ""
     @FocusState private var isCurrentPasswordFocused: Bool
     
     var body: some View {
@@ -214,6 +215,7 @@ struct ChangeAuthenticationView: View {
             let cleanSavedPassword = savedPassword.trimmingCharacters(in: .whitespacesAndNewlines)
             
             if cleanCurrentPassword == cleanSavedPassword {
+                verifiedOldPassword = savedPassword
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isCurrentPasswordVerified = true
                 }
@@ -253,6 +255,7 @@ struct ChangeAuthenticationView: View {
     }
     
     private func startMigrationProcess() {
+        let oldPassword = verifiedOldPassword
         Task {
             do {
                 // Get the new password that was just saved
@@ -267,7 +270,7 @@ struct ChangeAuthenticationView: View {
                 
                 // Start migration with old and new passwords
                 try await FileStorageManager.shared.migrateFilesToNewEncryptionKey(
-                    oldPassword: currentPassword,
+                    oldPassword: oldPassword,
                     newPassword: newPassword,
                     progress: { current, total in
                         Task { @MainActor in
@@ -289,6 +292,14 @@ struct ChangeAuthenticationView: View {
                 }
                 
             } catch {
+                // The setup screen already stored the new credential. `migrationFailed` means the
+                // files are still sealed with the old key, so put the old credential back or the
+                // vault cannot be opened.
+                if case FileStorageError.migrationFailed = error {
+                    try? KeychainManager.shared.savePassword(oldPassword)
+                    KeychainManager.shared.setAuthenticationType(currentAuthType)
+                    FileStorageManager.shared.setupEncryptionKey(from: oldPassword)
+                }
                 await MainActor.run {
                     // Navigate back to auth view and show error
                     navigationPath = NavigationPath()
