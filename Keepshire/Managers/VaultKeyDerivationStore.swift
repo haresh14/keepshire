@@ -21,6 +21,13 @@ protocol VaultKeyDerivationStoring {
     func loadBiometricKey(prompt: String) throws -> Data?
     func hasBiometricKey() -> Bool
     func deleteBiometricKey()
+
+    /// The vault key sealed under the recovery key, kept apart from the envelope so changing the
+    /// passcode, which replaces the envelope, can never drop it.
+    func saveRecoveryWrap(_ wrap: VaultKeyWrap) throws
+    /// Returns nil only when none is stored; any other Keychain failure throws.
+    func loadRecoveryWrap() throws -> VaultKeyWrap?
+    func deleteRecoveryWrap()
 }
 
 extension StoredVaultKeyMaterial {
@@ -39,6 +46,7 @@ extension StoredVaultKeyMaterial {
 final class InMemoryVaultKeyDerivationStore: VaultKeyDerivationStoring {
     private var material: StoredVaultKeyMaterial?
     private var biometricKey: Data?
+    private var recoveryWrap: VaultKeyWrap?
 
     func loadMaterial() throws -> StoredVaultKeyMaterial? {
         material
@@ -66,6 +74,18 @@ final class InMemoryVaultKeyDerivationStore: VaultKeyDerivationStoring {
 
     func deleteBiometricKey() {
         biometricKey = nil
+    }
+
+    func saveRecoveryWrap(_ wrap: VaultKeyWrap) throws {
+        recoveryWrap = wrap
+    }
+
+    func loadRecoveryWrap() throws -> VaultKeyWrap? {
+        recoveryWrap
+    }
+
+    func deleteRecoveryWrap() {
+        recoveryWrap = nil
     }
 }
 
@@ -106,5 +126,21 @@ final class KeychainVaultKeyDerivationStore: VaultKeyDerivationStoring {
 
     func deleteBiometricKey() {
         keychain.deleteBiometricVaultKey()
+    }
+
+    func saveRecoveryWrap(_ wrap: VaultKeyWrap) throws {
+        try keychain.saveRecoveryWrapData(JSONEncoder().encode(wrap))
+    }
+
+    func loadRecoveryWrap() throws -> VaultKeyWrap? {
+        guard let data = try keychain.loadRecoveryWrapData() else { return nil }
+        guard let wrap = try? JSONDecoder().decode(VaultKeyWrap.self, from: data) else {
+            throw KeychainError.invalidData
+        }
+        return wrap
+    }
+
+    func deleteRecoveryWrap() {
+        keychain.deleteRecoveryWrap()
     }
 }

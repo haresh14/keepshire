@@ -46,3 +46,27 @@ struct VaultCryptoServiceTests {
         key.withUnsafeBytes { Data($0) }
     }
 }
+
+struct RecoveryKeyTests {
+    @Test func generatedKeysAreFullLengthGroupedAndDistinct() {
+        let key = RecoveryKey.generate()
+        #expect(key.normalized.count == RecoveryKey.characterCount)
+        #expect(key.formatted.split(separator: "-").map(\.count) == Array(repeating: 4, count: 6))
+        #expect(!key.normalized.contains { "ILOU".contains($0) })
+        #expect(RecoveryKey.generate() != key)
+    }
+
+    @Test func typedKeysForgiveCaseSpacingAndLookalikes() throws {
+        let key = try #require(RecoveryKey(typed: "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01"))
+        #expect(RecoveryKey(typed: "abcd efgh jkmn pqrs tvwx yz01") == key)
+        #expect(RecoveryKey(typed: "ABCDEFGHJKMNPQRSTVWXYZOI") == key)
+        #expect(key.endsWithGroup(typed: "yzol"))
+        #expect(!key.endsWithGroup(typed: "YZ0"))
+    }
+
+    @Test func malformedKeysAreRejectedBeforeAnyGuess() {
+        #expect(RecoveryKey(typed: "ABCD-EFGH") == nil)
+        #expect(RecoveryKey(typed: "ABCD-EFGH-JKMN-PQRS-TVWX-YZ0U") == nil)
+        #expect(RecoveryKey(typed: "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-2") == nil)
+    }
+}

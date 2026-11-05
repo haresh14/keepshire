@@ -46,6 +46,8 @@ struct SettingsView: View {
     @State private var lockTimeout = KeychainManager.shared.getLockTimeout()
     @State private var showBiometricAlert = false
     @State private var showChangeAuthSheet = false
+    @State private var showRecoveryKeySheet = false
+    @State private var hasRecoveryKey = FileStorageManager.shared.hasRecoveryKey
     /// Held in state because the stored value lives in UserDefaults, which SwiftUI does not observe.
     @State private var currentAuthType = KeychainManager.shared.getAuthenticationType()
     @State private var showFakePasswordSheet = false
@@ -87,6 +89,14 @@ struct SettingsView: View {
             ChangeAuthenticationView(currentAuthType: currentAuthType, onAuthChanged: authenticationChanged)
                 .presentationSizing(.form)
         }
+        .sheet(isPresented: $showRecoveryKeySheet) {
+            RecoveryKeyView(
+                isReplacing: hasRecoveryKey,
+                onFinish: { hasRecoveryKey = true },
+                onTurnOff: hasRecoveryKey ? turnOffRecoveryKey : nil
+            )
+            .presentationSizing(.form)
+        }
         .sheet(isPresented: $showFakePasswordSheet) {
             fakePasswordSetup
                 .presentationSizing(.form)
@@ -94,6 +104,8 @@ struct SettingsView: View {
         .onAppear {
             loadStorageInfo()
             isFakePasswordSet = KeychainManager.shared.isFakePasswordSet()
+            // The tab is built before the post-unlock offer can turn the key on.
+            hasRecoveryKey = FileStorageManager.shared.hasRecoveryKey
             loadTrashCount()
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshVaultItems)) { _ in
@@ -274,9 +286,11 @@ struct SettingsView: View {
         SettingsAuthenticationSection(
             currentAuthType: currentAuthType,
             isFakePasswordSet: isFakePasswordSet,
+            hasRecoveryKey: loginStateManager.isFakeLogin ? nil : hasRecoveryKey,
             lockTimeout: $lockTimeout,
             biometricEnabled: $biometricEnabled,
             showChangeAuthentication: { showChangeAuthSheet = true },
+            showRecoveryKeySetup: { showRecoveryKeySheet = true },
             showFakePasswordSetup: { showFakePasswordSheet = true },
             removeFakePassword: removeFakePassword,
             updateLockTimeout: { KeychainManager.shared.setLockTimeout($0) },
@@ -337,6 +351,11 @@ struct SettingsView: View {
         case .never: return "App will never lock automatically (not recommended)"
         case .none: return "App will lock after \(lockTimeout) seconds in background"
         }
+    }
+
+    private func turnOffRecoveryKey() {
+        FileStorageManager.shared.removeRecoveryKey()
+        hasRecoveryKey = false
     }
 
     private func authenticationChanged() {

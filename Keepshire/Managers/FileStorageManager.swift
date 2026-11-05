@@ -198,6 +198,8 @@ class FileStorageManager: FileStorageManaging {
         try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [
             cryptoService.wrap(key, password: password, authType: authType)
         ]))
+        // The Keychain outlives a reinstall; a recovery key from an earlier vault opens nothing here.
+        keyDerivationStore.deleteRecoveryWrap()
         clearThumbnailCache()
         activate(key)
     }
@@ -243,6 +245,66 @@ class FileStorageManager: FileStorageManaging {
                 completion(true)
             }
         }
+    }
+
+    // MARK: - Recovery key
+
+    var hasRecoveryKey: Bool {
+        (try? keyDerivationStore.loadRecoveryWrap()) != nil
+    }
+
+    /// Seals the unlocked vault key under `recoveryKey`, which the user has saved. Any earlier
+    /// recovery key stops working. Only the wrap is stored, never the key itself.
+    func saveRecoveryKey(_ recoveryKey: RecoveryKey) throws {
+        guard let encryptionKey else { throw FileStorageError.noEncryptionKey }
+        let wrap = try cryptoService.wrap(encryptionKey, password: recoveryKey.normalized)
+        guard cryptoService.unwrap(wrap, password: recoveryKey.normalized)?.matches(encryptionKey) == true else {
+            throw FileStorageError.credentialChangeFailed
+        }
+        try keyDerivationStore.saveRecoveryWrap(wrap)
+        // A key the user saved but the Keychain did not keep would fail exactly when needed.
+        guard try keyDerivationStore.loadRecoveryWrap() == wrap else {
+            throw FileStorageError.credentialChangeFailed
+        }
+    }
+
+    func removeRecoveryKey() {
+        keyDerivationStore.deleteRecoveryWrap()
+    }
+
+    /// Checks a recovery key by opening its wrap, with no other effect.
+    func verifyRecoveryKey(_ recoveryKey: RecoveryKey) -> Bool {
+        openRecoveryWrap(recoveryKey) != nil
+    }
+
+    /// Sets a new credential with the recovery key standing in for the forgotten one, then unlocks.
+    /// Like a credential change it re-wraps the same vault key, so no file is rewritten, the
+    /// recovery key keeps working, and so does any Face ID copy.
+    func resetCredential(withRecoveryKey recoveryKey: RecoveryKey, to newPassword: String, authType: AuthenticationType) throws {
+        guard let vaultKey = openRecoveryWrap(recoveryKey) else {
+            throw FileStorageError.credentialChangeFailed
+        }
+        let newWrap = try cryptoService.wrap(vaultKey, password: newPassword, authType: authType)
+        guard cryptoService.unwrap(newWrap, password: newPassword)?.matches(vaultKey) == true else {
+            throw FileStorageError.credentialChangeFailed
+        }
+        // The replaced envelope opens nothing for anyone who has forgotten its credential, so
+        // there is no old wrap worth restoring if this write fails.
+        try keyDerivationStore.saveEnvelope(VaultKeyEnvelope(wraps: [newWrap]))
+        guard case .envelope(let saved)? = try keyDerivationStore.loadMaterial(), saved.wraps == [newWrap] else {
+            throw FileStorageError.credentialChangeFailed
+        }
+        clearThumbnailCache()
+        activate(vaultKey)
+    }
+
+    /// The vault key the recovery key releases, provided it still opens what is stored: a wrap
+    /// left from before a reset or a restore must not stand in for the real one.
+    private func openRecoveryWrap(_ recoveryKey: RecoveryKey) -> SymmetricKey? {
+        guard let wrap = try? keyDerivationStore.loadRecoveryWrap(),
+              let key = cryptoService.unwrap(wrap, password: recoveryKey.normalized),
+              keyOpensVault(key) else { return nil }
+        return key
     }
 
     private func activate(_ key: SymmetricKey) {

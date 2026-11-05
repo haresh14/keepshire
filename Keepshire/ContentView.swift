@@ -73,6 +73,13 @@ struct ContentView: View {
                 // Upload progress overlay
                 UploadProgressOverlayView()
             }
+            .sheet(isPresented: $authenticationCoordinator.shouldOfferRecoveryKey) {
+                RecoveryKeyView(
+                    onFinish: { authenticationCoordinator.shouldOfferRecoveryKey = false },
+                    onDecline: authenticationCoordinator.declineRecoveryKeyOffer
+                )
+                .presentationSizing(.form)
+            }
         }
     }
 }

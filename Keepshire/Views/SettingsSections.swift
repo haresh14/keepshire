@@ -59,9 +59,12 @@ struct SettingsSecuritySection: View {
 struct SettingsAuthenticationSection: View {
     let currentAuthType: AuthenticationType
     let isFakePasswordSet: Bool
+    /// Nil in the decoy session, which must not reveal or change the real vault's recovery key.
+    let hasRecoveryKey: Bool?
     @Binding var lockTimeout: Int
     @Binding var biometricEnabled: Bool
     let showChangeAuthentication: () -> Void
+    let showRecoveryKeySetup: () -> Void
     let showFakePasswordSetup: () -> Void
     let removeFakePassword: () -> Void
     let updateLockTimeout: (Int) -> Void
@@ -82,6 +85,9 @@ struct SettingsAuthenticationSection: View {
                 }
             }
             .foregroundColor(.primary)
+            if let hasRecoveryKey {
+                recoveryKeyRow(hasRecoveryKey: hasRecoveryKey)
+            }
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     SettingsRowLabel(title: "Fake Password", systemImage: "theatermasks.fill", tint: .purple)
@@ -110,7 +116,9 @@ struct SettingsAuthenticationSection: View {
             }
             .foregroundColor(.primary)
             if isFakePasswordSet {
-                Button("Remove Fake Password", role: .destructive, action: removeFakePassword)
+                Button(role: .destructive, action: removeFakePassword) {
+                    SettingsRowLabel(title: "Remove Fake Password", systemImage: "trash.fill", tint: .red)
+                }
             }
             Picker(selection: $lockTimeout) {
                 ForEach(KeychainManager.LockTimeout.allCases, id: \.self) { timeout in
@@ -128,6 +136,29 @@ struct SettingsAuthenticationSection: View {
                 .onChange(of: biometricEnabled) { _, value in updateBiometric(value) }
             biometricStatus
         }
+    }
+
+    private func recoveryKeyRow(hasRecoveryKey: Bool) -> some View {
+        Button(action: showRecoveryKeySetup) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    SettingsRowLabel(title: "Recovery Key", systemImage: "key.horizontal.fill", tint: .yellow)
+                    Spacer()
+                    Text(hasRecoveryKey ? "On" : "Off")
+                        .foregroundColor(hasRecoveryKey ? KeepshireTheme.success : .secondary)
+                        .font(.caption)
+                    Image(systemName: "chevron.right").foregroundColor(.secondary).font(.caption)
+                }
+                Text(hasRecoveryKey
+                     ? "Create a new key or turn it off"
+                     : "The only way back in if you forget your passcode")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 42)
+            }
+        }
+        .foregroundColor(.primary)
+        .accessibilityIdentifier("settings.recoveryKey")
     }
 
     private var biometricStatus: some View {

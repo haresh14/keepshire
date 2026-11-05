@@ -160,6 +160,7 @@ final class FakeFileStorageManager: FileStorageManaging {
     func verifyCredential(_ password: String) -> Bool { encryptionPasswords.contains(password) }
     func changeCredential(from oldPassword: String, to newPassword: String, authType: AuthenticationType) throws {}
     var hasBiometricUnlock: Bool { false }
+    var hasRecoveryKey = false
     func enableBiometricUnlock() throws {}
     func disableBiometricUnlock() {}
     func unlockWithBiometrics(prompt: String, completion: @escaping (Bool) -> Void) { completion(false) }

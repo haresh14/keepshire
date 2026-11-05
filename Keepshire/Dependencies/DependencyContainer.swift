@@ -56,6 +56,7 @@ protocol FileStorageManaging {
     func enableBiometricUnlock() throws
     func disableBiometricUnlock()
     func unlockWithBiometrics(prompt: String, completion: @escaping (Bool) -> Void)
+    var hasRecoveryKey: Bool { get }
     func toggleFavorite(for vaultItem: VaultItem)
     func fetchFavoriteItems() -> [VaultItem]
     func renameFile(vaultItem: VaultItem, newFileName: String) throws
@@ -83,6 +84,8 @@ protocol KeychainManaging {
     func setLastBackgroundTime()
     func clearLastBackgroundTime()
     func shouldRequireAuthentication() -> Bool
+    func hasDeclinedRecoveryKeyOffer() -> Bool
+    func setRecoveryKeyOfferDeclined(_ declined: Bool)
     func clearAllKeychainData()
 }
 

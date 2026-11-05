@@ -50,6 +50,10 @@ struct KeepshireApp: App {
         guard arguments.contains("--ui-testing") else { return }
 
         AppDataManager.shared.clearAllAppData()
+        // Screenshot and flow tests expect the vault right after unlock, not the recovery key offer.
+        if !arguments.contains("--ui-testing-recovery-offer") {
+            KeychainManager.shared.setRecoveryKeyOfferDeclined(true)
+        }
 
         if arguments.contains("--ui-testing-first-launch") {
             UserDefaults.standard.removeObject(forKey: "hasLaunchedBefore")

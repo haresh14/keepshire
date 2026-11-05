@@ -52,6 +52,8 @@ class KeychainManager: KeychainManaging {
     private let keyDerivationAccount = "vaultKeyDerivation"
     private let biometricKeyAccount = "vaultKeyBiometric"
     private let unlockThrottleAccount = "unlockThrottle"
+    private let recoveryWrapAccount = "vaultKeyRecovery"
+    private let recoveryKeyOfferDeclinedKey = "recoveryKeyOfferDeclined"
     private let biometricEnabledKey = "biometricEnabled"
     private let authTypeKey = "authenticationType"
     
@@ -382,6 +384,30 @@ class KeychainManager: KeychainManaging {
         try? delete(account: biometricKeyAccount)
     }
 
+    // MARK: - Recovery key
+
+    func saveRecoveryWrapData(_ data: Data) throws {
+        try upsert(data, account: recoveryWrapAccount)
+    }
+
+    /// Returns nil only when the item does not exist; every other failure throws.
+    func loadRecoveryWrapData() throws -> Data? {
+        try loadData(account: recoveryWrapAccount)
+    }
+
+    func deleteRecoveryWrap() {
+        try? delete(account: recoveryWrapAccount)
+    }
+
+    /// Set when the user turns down the offer after unlock, so it is not repeated on every unlock.
+    func hasDeclinedRecoveryKeyOffer() -> Bool {
+        defaults.bool(forKey: recoveryKeyOfferDeclinedKey)
+    }
+
+    func setRecoveryKeyOfferDeclined(_ declined: Bool) {
+        defaults.set(declined, forKey: recoveryKeyOfferDeclinedKey)
+    }
+
     // MARK: - Unlock throttle
 
     func loadUnlockThrottleData() -> Data? {
@@ -403,6 +429,7 @@ class KeychainManager: KeychainManaging {
 
         deleteKeyDerivationRecord()
         deleteBiometricVaultKey()
+        deleteRecoveryWrap()
         try? delete(account: unlockThrottleAccount)
         
         VaultLog.debug("DEBUG: Keychain data cleared")
@@ -414,6 +441,7 @@ class KeychainManager: KeychainManaging {
         // Clear authentication settings
         defaults.removeObject(forKey: authTypeKey)
         defaults.removeObject(forKey: biometricEnabledKey)
+        defaults.removeObject(forKey: recoveryKeyOfferDeclinedKey)
         
         // Clear lock timeout settings
         defaults.removeObject(forKey: lockTimeoutKey)

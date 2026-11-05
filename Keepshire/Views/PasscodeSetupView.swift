@@ -112,7 +112,7 @@ struct PasscodeSetupView: View {
             .animation(.smooth(duration: 0.25), value: isConfirming)
 
             if !isFakePasswordSetup {
-                Text("If you forget this passcode, Keepshire cannot recover your files.")
+                Text("If you forget this passcode, only a recovery key can open your files. Keepshire cannot recover them.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -177,18 +177,14 @@ struct PasscodeSetupView: View {
             do {
                 // Validate fake passcode is different from main passcode
                 if FileStorageManager.shared.verifyCredential(passcode) {
-                    showError(message: "Fake passcode must be different from your main passcode")
-                    passcode = ""
-                    confirmPasscode = ""
+                    rejectFakePasscode()
                     return
                 }
                 
                 try KeychainManager.shared.saveFakePassword(passcode)
                 onPasscodeSet()
             } catch KeychainError.duplicateEntry {
-                showError(message: "Fake passcode must be different from your main passcode")
-                passcode = ""
-                confirmPasscode = ""
+                rejectFakePasscode()
             } catch {
                 VaultLog.debug("ERROR: Failed to save fake passcode: \(error)")
                 showError(message: "Failed to save fake passcode")
@@ -210,6 +206,16 @@ struct PasscodeSetupView: View {
         }
     }
     
+    /// Starts over from the first entry: staying on confirm would compare every retry with nothing.
+    private func rejectFakePasscode() {
+        showError(message: "Fake passcode must be different from your main passcode")
+        passcode = ""
+        confirmPasscode = ""
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isConfirming = false
+        }
+    }
+
     private func showError(message: String) {
         let id = feedback.reject(message)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {

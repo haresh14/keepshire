@@ -98,7 +98,7 @@ struct AuthTypeSelectionView: View {
             continueButton
 
             (Text(Image(systemName: "exclamationmark.shield.fill")).foregroundColor(.orange)
-                + Text("  If you forget your passcode or password, Keepshire cannot recover your files."))
+                + Text("  If you forget your passcode or password, only a recovery key can open your files. Keepshire cannot recover them."))
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

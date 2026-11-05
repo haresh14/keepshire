@@ -10,6 +10,8 @@ final class AuthenticationCoordinator: ObservableObject {
     @Published var isCheckingBiometric = false
     @Published var shouldShowPasscode = false
     @Published var shouldShowPrivacyOverlay = false
+    /// Offers a recovery key to a vault without one: once at setup, then after unlock until declined.
+    @Published var shouldOfferRecoveryKey = false
 
     private let keychainManager: KeychainManaging
     private let biometricManager: any BiometricAuthManaging
@@ -108,6 +110,12 @@ final class AuthenticationCoordinator: ObservableObject {
         isPasswordSet = true
         isAuthenticated = true
         importSharedFilesIfUnlocked()
+        offerRecoveryKeyIfNeeded()
+    }
+
+    func declineRecoveryKeyOffer() {
+        keychainManager.setRecoveryKeyOfferDeclined(true)
+        shouldOfferRecoveryKey = false
     }
 
     /// The lock screen has already checked the credential and, for a real login, unlocked the vault.
@@ -172,6 +180,15 @@ final class AuthenticationCoordinator: ObservableObject {
         // Builds before the key envelope stored the passcode itself; it must not outlive an upgrade.
         try? keychainManager.deletePassword()
         importSharedFilesIfUnlocked()
+        offerRecoveryKeyIfNeeded()
+    }
+
+    /// The decoy session has no vault key to seal, and must not hint that a real vault exists.
+    private func offerRecoveryKeyIfNeeded() {
+        guard !loginStateManager.isFakeLogin,
+              !keychainManager.hasDeclinedRecoveryKeyOffer(),
+              !fileStorageManager.hasRecoveryKey else { return }
+        shouldOfferRecoveryKey = true
     }
 
     private func importSharedFilesIfUnlocked() {

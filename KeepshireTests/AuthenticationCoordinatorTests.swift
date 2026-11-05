@@ -104,6 +104,39 @@ struct AuthenticationCoordinatorTests {
         #expect(storage.pendingShareImportCalls == 0)
     }
 
+    @Test func newVaultIsOfferedARecoveryKeyUntilDeclined() {
+        let keychain = FakeAuthenticationKeychain()
+        let storage = FakeFileStorageManager(coreDataManager: TestCoreDataStore.reset())
+        let coordinator = makeCoordinator(keychain: keychain, storage: storage)
+
+        coordinator.handlePasscodeSet()
+        #expect(coordinator.shouldOfferRecoveryKey)
+
+        coordinator.declineRecoveryKeyOffer()
+        #expect(!coordinator.shouldOfferRecoveryKey)
+        coordinator.handleAuthentication()
+        #expect(!coordinator.shouldOfferRecoveryKey)
+    }
+
+    @Test func unlockOffersARecoveryKeyOnlyToARealVaultWithoutOne() {
+        let keychain = FakeAuthenticationKeychain()
+        let storage = FakeFileStorageManager(coreDataManager: TestCoreDataStore.reset())
+        storage.hasRecoveryKey = true
+        let coordinator = makeCoordinator(keychain: keychain, storage: storage)
+        coordinator.handleAuthentication()
+        #expect(!coordinator.shouldOfferRecoveryKey)
+
+        let login = FakeLoginStateManager()
+        login.setLoginState(isFakeLogin: true)
+        let decoy = makeCoordinator(
+            keychain: keychain,
+            login: login,
+            storage: FakeFileStorageManager(coreDataManager: TestCoreDataStore.reset())
+        )
+        decoy.handleAuthentication()
+        #expect(!decoy.shouldOfferRecoveryKey)
+    }
+
     private func makeCoordinator(
         keychain: FakeAuthenticationKeychain,
         biometric: FakeAuthenticationBiometric = FakeAuthenticationBiometric(),
@@ -127,6 +160,7 @@ private final class FakeAuthenticationKeychain: KeychainManaging {
     var didSetBackgroundTime = false
 
     var didDeleteLegacyPassword = false
+    var declinedRecoveryKeyOffer = false
 
     func deletePassword() throws { didDeleteLegacyPassword = true }
     func isPasswordSet() -> Bool { password != nil }
@@ -144,6 +178,8 @@ private final class FakeAuthenticationKeychain: KeychainManaging {
     func setLastBackgroundTime() { didSetBackgroundTime = true }
     func clearLastBackgroundTime() { didSetBackgroundTime = false }
     func shouldRequireAuthentication() -> Bool { requireAuthentication }
+    func hasDeclinedRecoveryKeyOffer() -> Bool { declinedRecoveryKeyOffer }
+    func setRecoveryKeyOfferDeclined(_ declined: Bool) { declinedRecoveryKeyOffer = declined }
     func clearAllKeychainData() {
         password = nil
         authenticationType = nil

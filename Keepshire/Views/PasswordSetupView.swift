@@ -93,7 +93,7 @@ struct PasswordSetupView: View {
             )
 
             if !isFakePasswordSetup {
-                Text("If you forget this password, Keepshire cannot recover your files.")
+                Text("If you forget this password, only a recovery key can open your files. Keepshire cannot recover them.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

@@ -356,6 +356,106 @@ struct FileStorageManagerTests {
         #expect(!manager.unlock(password: "9999"))
     }
 
+    // MARK: - Recovery key
+
+    private func makeRecoveryManager(
+        _ name: String,
+        in storage: IsolatedTestDependencies,
+        keyStore: FlakyVaultKeyStore = FlakyVaultKeyStore()
+    ) -> FileStorageManager {
+        FileStorageManager(
+            documentsDirectory: storage.rootURL.appendingPathComponent(name),
+            coreDataManager: storage.coreDataManager,
+            keyDerivationStore: keyStore
+        )
+    }
+
+    @Test func testRecoveryKeyResetsAForgottenPasscodeWithoutTouchingFiles() async throws {
+        let storage = try makeStorage()
+        let manager = makeRecoveryManager("Recovery", in: storage)
+        let data = Data("recovered".utf8)
+        try manager.createVault(password: "1234", authType: .passcode4)
+        let item = try manager.saveFile(data: data, fileName: "recovered.txt", fileType: "text/plain")
+        #expect(!manager.hasRecoveryKey)
+
+        let recoveryKey = RecoveryKey.generate()
+        try manager.saveRecoveryKey(recoveryKey)
+        #expect(manager.hasRecoveryKey)
+
+        // A passcode change replaces the envelope; the recovery key lives apart and survives it.
+        try manager.changeCredential(from: "1234", to: "5678", authType: .passcode4)
+        #expect(manager.verifyRecoveryKey(recoveryKey))
+
+        let typed = try #require(RecoveryKey(typed: recoveryKey.formatted.lowercased()))
+        try manager.resetCredential(withRecoveryKey: typed, to: "Secret123", authType: .password)
+
+        #expect(try manager.loadFile(vaultItem: item) == data)
+        #expect(!manager.unlock(password: "5678"))
+        #expect(manager.unlock(password: "Secret123"))
+        #expect(try manager.loadFile(vaultItem: item) == data)
+        #expect(manager.verifyRecoveryKey(recoveryKey))
+    }
+
+    @Test func testWrongRecoveryKeyOpensNothing() async throws {
+        let storage = try makeStorage()
+        let manager = makeRecoveryManager("WrongRecovery", in: storage)
+        try manager.createVault(password: "1234", authType: .passcode4)
+        try manager.saveRecoveryKey(RecoveryKey.generate())
+
+        let wrong = RecoveryKey.generate()
+        #expect(!manager.verifyRecoveryKey(wrong))
+        #expect(throws: FileStorageError.credentialChangeFailed) {
+            try manager.resetCredential(withRecoveryKey: wrong, to: "9999", authType: .passcode4)
+        }
+        #expect(manager.unlock(password: "1234"))
+    }
+
+    @Test func testNewRecoveryKeyReplacesTheOldOne() async throws {
+        let storage = try makeStorage()
+        let manager = makeRecoveryManager("ReplaceRecovery", in: storage)
+        try manager.createVault(password: "1234", authType: .passcode4)
+        let first = RecoveryKey.generate()
+        try manager.saveRecoveryKey(first)
+        let second = RecoveryKey.generate()
+        try manager.saveRecoveryKey(second)
+
+        #expect(!manager.verifyRecoveryKey(first))
+        #expect(manager.verifyRecoveryKey(second))
+
+        manager.removeRecoveryKey()
+        #expect(!manager.hasRecoveryKey)
+        #expect(!manager.verifyRecoveryKey(second))
+    }
+
+    @Test func testRecoveryKeyNeedsAnUnlockedVaultAndAWorkingKeychain() async throws {
+        let keyStore = FlakyVaultKeyStore()
+        let storage = try makeStorage()
+        let manager = makeRecoveryManager("FailedRecovery", in: storage, keyStore: keyStore)
+        #expect(throws: FileStorageError.noEncryptionKey) {
+            try manager.saveRecoveryKey(RecoveryKey.generate())
+        }
+
+        try manager.createVault(password: "1234", authType: .passcode4)
+        keyStore.failWrites = true
+        #expect(throws: Error.self) { try manager.saveRecoveryKey(RecoveryKey.generate()) }
+        keyStore.failWrites = false
+        #expect(!manager.hasRecoveryKey)
+    }
+
+    @Test func testNewVaultDropsARecoveryKeyLeftByAnEarlierOne() async throws {
+        let keyStore = FlakyVaultKeyStore()
+        let storage = try makeStorage()
+        let manager = makeRecoveryManager("StaleRecovery", in: storage, keyStore: keyStore)
+        try manager.createVault(password: "1234", authType: .passcode4)
+        try manager.saveRecoveryKey(RecoveryKey.generate())
+
+        // As after a reinstall: the Keychain keeps its items while the vault itself is gone.
+        keyStore.deleteRecord()
+        try manager.createVault(password: "4321", authType: .passcode4)
+
+        #expect(!manager.hasRecoveryKey)
+    }
+
     @Test func testBiometricUnlockReleasesTheSameVaultKey() async throws {
         let storage = try makeStorage()
         let keyStore = FlakyVaultKeyStore()
@@ -1141,5 +1241,19 @@ private final class FlakyVaultKeyStore: VaultKeyDerivationStoring {
 
     func deleteBiometricKey() {
         backing.deleteBiometricKey()
+    }
+
+    func saveRecoveryWrap(_ wrap: VaultKeyWrap) throws {
+        if failWrites { throw KeychainError.unknown(errSecIO) }
+        try backing.saveRecoveryWrap(wrap)
+    }
+
+    func loadRecoveryWrap() throws -> VaultKeyWrap? {
+        if failReads { throw KeychainError.unknown(errSecInteractionNotAllowed) }
+        return try backing.loadRecoveryWrap()
+    }
+
+    func deleteRecoveryWrap() {
+        backing.deleteRecoveryWrap()
     }
 }

@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ChangeAuthenticationView: View {
     let currentAuthType: AuthenticationType
+    /// The lock screen's "Forgot passcode?": the recovery key stands in for the current credential.
+    var isRecovering = false
     let onAuthChanged: () -> Void
     
     @Environment(\.dismiss) var dismiss
@@ -20,6 +22,7 @@ struct ChangeAuthenticationView: View {
     @State private var navigationPath = NavigationPath()
     /// The stored credential the vault key is derived from; the typed text may differ in whitespace.
     @State private var verifiedOldPassword: String = ""
+    @State private var verifiedRecoveryKey: RecoveryKey?
     @FocusState private var isCurrentPasswordFocused: Bool
     
     var body: some View {
@@ -28,7 +31,11 @@ struct ChangeAuthenticationView: View {
                 ScrollView {
                     VStack(spacing: 30) {
                         if !isCurrentPasswordVerified {
-                            currentPasswordSection
+                            if isRecovering {
+                                recoveryKeySection
+                            } else {
+                                currentPasswordSection
+                            }
                         } else {
                             newAuthSelectionSection
                         }
@@ -42,7 +49,7 @@ struct ChangeAuthenticationView: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
             .background(KeepshireBackground())
-            .navigationTitle("Change Authentication")
+            .navigationTitle(isRecovering ? "Recover Vault" : "Change Authentication")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -89,6 +96,43 @@ struct ChangeAuthenticationView: View {
         }
     }
     
+    private var recoveryKeySection: some View {
+        VStack(spacing: 20) {
+            KeepshireHero(
+                artwork: .symbol("key.horizontal.fill"),
+                title: "Enter your recovery key",
+                subtitle: "Use the key you saved when you turned on recovery. You'll then choose a new \(currentAuthType.isPasscode ? "passcode" : "password").",
+                artworkSize: 64
+            )
+            TextField("XXXX-XXXX-XXXX-XXXX-XXXX-XXXX", text: $currentPassword, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.system(.body, design: .monospaced, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .focused($isCurrentPasswordFocused)
+                .onSubmit(verifyRecoveryKey)
+                .keepshireFieldStyle()
+                .shake(feedback.shakes)
+                .onChange(of: currentPassword) { _, value in
+                    if !value.isEmpty && !feedback.isLocked { feedback.clear() }
+                }
+                .disabled(feedback.isLocked)
+                .opacity(feedback.isLocked ? 0.45 : 1)
+                .accessibilityIdentifier("recover.recoveryKey")
+            errorView
+            Button("Continue", action: verifyRecoveryKey)
+                .buttonStyle(KeepshirePrimaryButtonStyle())
+                .disabled(currentPassword.isEmpty || feedback.isLocked)
+        }
+        .onAppear {
+            isCurrentPasswordFocused = true
+            if let until = UnlockThrottle.shared.lockedUntil() {
+                showLockout(until: until)
+            }
+        }
+    }
+
     private var headerSection: some View {
         KeepshireHero(
             artwork: .symbol("lock.shield.fill"),
@@ -177,7 +221,7 @@ struct ChangeAuthenticationView: View {
                 )
             }
             
-            if newAuthType == currentAuthType {
+            if newAuthType == currentAuthType && !isRecovering {
                 Text("You are changing to the same authentication type")
                     .font(.caption)
                     .foregroundColor(.orange)
@@ -222,6 +266,31 @@ struct ChangeAuthenticationView: View {
         currentPassword = ""
     }
     
+    /// Counts against the same throttle as the passcode, so the recovery key is no side door for
+    /// guessing. A malformed key is a typo, not a guess, and costs nothing.
+    private func verifyRecoveryKey() {
+        let throttle = UnlockThrottle.shared
+        if let until = throttle.lockedUntil() {
+            showLockout(until: until)
+            return
+        }
+        guard let recoveryKey = RecoveryKey(typed: currentPassword) else {
+            let id = feedback.reject("A recovery key has \(RecoveryKey.characterCount) letters and numbers.")
+            clearFeedback(id, after: 4)
+            return
+        }
+        guard FileStorageManager.shared.verifyRecoveryKey(recoveryKey) else {
+            let rejection = throttle.rejection(noun: "recovery key")
+            showError(message: rejection.message, lockedUntil: rejection.lockedUntil)
+            return
+        }
+        verifiedRecoveryKey = recoveryKey
+        newAuthType = currentAuthType
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isCurrentPasswordVerified = true
+        }
+    }
+
     private func proceedToNewAuth() {
         // Navigate to setup view using native navigation
         navigationPath.append(newAuthType)
@@ -252,8 +321,23 @@ struct ChangeAuthenticationView: View {
     /// wrap and its type replace the old ones in one Keychain write, so no failure can leave a
     /// credential that does not open the vault or a keypad that cannot enter it.
     private func commitCredential(_ newPassword: String, authType: AuthenticationType) throws {
+        if let verifiedRecoveryKey {
+            try FileStorageManager.shared.resetCredential(withRecoveryKey: verifiedRecoveryKey, to: newPassword, authType: authType)
+            KeychainManager.shared.setAuthenticationType(authType)
+            removeFakePasswordIfUnusable(newPassword: newPassword, authType: authType)
+            return
+        }
         try FileStorageManager.shared.changeCredential(from: verifiedOldPassword, to: newPassword, authType: authType)
         KeychainManager.shared.setAuthenticationType(authType)
+    }
+
+    /// A decoy of another lock type cannot be typed any more, and one equal to the new credential
+    /// would never be reached, since the real vault is tried first.
+    private func removeFakePasswordIfUnusable(newPassword: String, authType: AuthenticationType) {
+        let keychain = KeychainManager.shared
+        guard keychain.isFakePasswordSet(),
+              authType != currentAuthType || keychain.verifyFakePassword(newPassword) else { return }
+        try? keychain.deleteFakePassword()
     }
 
     private func finishCredentialChange() {

@@ -12,6 +12,8 @@ struct PasscodeView: View {
     @State private var confirmPasscode: String = ""
     @State private var feedback = CredentialFeedbackState()
     @State private var showPassword: Bool = false
+    @State private var hasRecoveryKey = false
+    @State private var isRecovering = false
     @FocusState private var isPasscodeFocused: Bool
     
     let isSettingPasscode: Bool
@@ -59,6 +61,7 @@ struct PasscodeView: View {
                             if isSettingPasscode {
                                 actionButton
                             }
+                            forgotButton
                             cancelButton
                         }
                     }
@@ -75,6 +78,10 @@ struct PasscodeView: View {
             }
         }
         .onAppear(perform: handleOnAppear)
+        .sheet(isPresented: $isRecovering) {
+            ChangeAuthenticationView(currentAuthType: authType, isRecovering: true, onAuthChanged: finishRecovery)
+                .presentationSizing(.form)
+        }
     }
     
     // MARK: - View Components
@@ -214,6 +221,16 @@ struct PasscodeView: View {
         }
     }
     
+    @ViewBuilder
+    private var forgotButton: some View {
+        if !isSettingPasscode && hasRecoveryKey {
+            Button(isPasswordType ? "Forgot password?" : "Forgot passcode?") { isRecovering = true }
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundColor(KeepshireTheme.accent)
+                .accessibilityIdentifier("lock.forgot")
+        }
+    }
+
     /// Passcodes get Face ID as a key in the keypad; a password has no keypad, so it keeps this button.
     @ViewBuilder
     private var biometricButton: some View {
@@ -252,6 +269,7 @@ struct PasscodeView: View {
     
     private func handleOnAppear() {
         isPasscodeFocused = true
+        hasRecoveryKey = !isSettingPasscode && FileStorageManager.shared.hasRecoveryKey
         // A lockout survives relaunch, so show the countdown before the first keypress is wasted.
         if !isSettingPasscode, let until = UnlockThrottle.shared.lockedUntil() {
             showLockout(until: until)
@@ -337,6 +355,13 @@ struct PasscodeView: View {
         onAuthenticated()
     }
     
+    /// The recovery flow has set the new credential and unlocked the real vault.
+    private func finishRecovery() {
+        KeychainManager.shared.clearLastBackgroundTime()
+        LoginStateManager.shared.setLoginState(isFakeLogin: false)
+        onAuthenticated()
+    }
+
     private func authenticateWithBiometrics() {
         FileStorageManager.shared.unlockWithBiometrics(prompt: "Unlock your vault") { success in
             guard success else { return }
