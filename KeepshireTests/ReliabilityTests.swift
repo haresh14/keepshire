@@ -150,4 +150,23 @@ struct ReliabilityTests {
         #expect(UnlockThrottle.lockout(afterFailures: 9) == 60 * 60)
         #expect(UnlockThrottle.lockout(afterFailures: 50) == 60 * 60)
     }
+
+    @Test func rejectionWarnsBeforeTheFirstWaitAndCountsDown() {
+        var stored: Data?
+        let throttle = UnlockThrottle(load: { stored }, save: { stored = $0 })
+        let now = Date(timeIntervalSince1970: 2_000_000)
+
+        #expect(throttle.rejection(noun: "passcode", now: now).message == "Incorrect passcode. Try again.")
+        #expect(throttle.rejection(noun: "passcode", now: now).message == "Incorrect passcode. Try again.")
+        #expect(throttle.rejection(noun: "passcode", now: now).message == "Incorrect passcode. 2 more tries before a short wait.")
+        #expect(throttle.rejection(noun: "passcode", now: now).message == "Incorrect passcode. 1 more try before a short wait.")
+        let locked = throttle.rejection(noun: "passcode", now: now)
+        #expect(locked.lockedUntil == now.addingTimeInterval(30))
+        #expect(throttle.lockedUntil(now: now) == now.addingTimeInterval(30))
+
+        #expect(UnlockThrottle.lockoutMessage(remaining: 28.2) == "Too many attempts. Try again in 0:29.")
+        #expect(UnlockThrottle.lockoutMessage(remaining: 300) == "Too many attempts. Try again in 5:00.")
+        #expect(UnlockThrottle.lockoutMessage(remaining: 3600) == "Too many attempts. Try again in 1:00:00.")
+        #expect(UnlockThrottle.lockoutMessage(remaining: 0.2) == "Too many attempts. Try again in 0:01.")
+    }
 }

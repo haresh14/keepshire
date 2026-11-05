@@ -10,8 +10,7 @@ import SwiftUI
 struct PasscodeView: View {
     @State private var passcode: String = ""
     @State private var confirmPasscode: String = ""
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
+    @State private var feedback = CredentialFeedbackState()
     @State private var showPassword: Bool = false
     @FocusState private var isPasscodeFocused: Bool
     
@@ -48,6 +47,13 @@ struct PasscodeView: View {
                         
                         VStack(spacing: 18) {
                             passcodeFields
+                                .shake(feedback.shakes)
+                                .onChange(of: passcode) { _, value in
+                                    if !value.isEmpty && !feedback.isLocked { feedback.clear() }
+                                }
+                                .disabled(feedback.isLocked)
+                                .opacity(feedback.isLocked ? 0.45 : 1)
+                                .animation(.easeOut(duration: 0.2), value: feedback.isLocked)
                             errorView
                             if isSettingPasscode {
                                 actionButton
@@ -174,14 +180,8 @@ struct PasscodeView: View {
         }
     }
     
-    @ViewBuilder
     private var errorView: some View {
-        if showError {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .transition(.opacity)
-        }
+        CredentialFeedback(message: feedback.message, lockedUntil: feedback.lockedUntil)
     }
     
     @ViewBuilder
@@ -241,6 +241,10 @@ struct PasscodeView: View {
     
     private func handleOnAppear() {
         isPasscodeFocused = true
+        // A lockout survives relaunch, so show the countdown before the first keypress is wasted.
+        if !isSettingPasscode, let until = UnlockThrottle.shared.lockedUntil() {
+            showLockout(until: until)
+        }
         
         // Removed automatic biometric trigger - now handled by ContentView
         // to prevent UI jerking and duplicate prompts
@@ -297,8 +301,8 @@ struct PasscodeView: View {
     
     private func handleAuthentication() {
         let throttle = UnlockThrottle.shared
-        if let remaining = throttle.remainingLockout() {
-            showError(message: UnlockThrottle.message(for: remaining))
+        if let until = throttle.lockedUntil() {
+            showLockout(until: until)
             passcode = ""
             return
         }
@@ -311,12 +315,8 @@ struct PasscodeView: View {
         } else if KeychainManager.shared.verifyFakePassword(passcode) {
             isFakeLogin = true
         } else {
-            let type = isPasswordType ? "password" : "passcode"
-            if let wait = throttle.recordFailure() {
-                showError(message: UnlockThrottle.message(for: wait))
-            } else {
-                showError(message: "Incorrect \(type)")
-            }
+            let rejection = throttle.rejection(noun: isPasswordType ? "password" : "passcode")
+            showError(message: rejection.message, lockedUntil: rejection.lockedUntil)
             passcode = ""
             return
         }
@@ -336,12 +336,26 @@ struct PasscodeView: View {
         }
     }
     
-    private func showError(message: String) {
-        errorMessage = message
-        showError = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            showError = false
+    /// A wrong-credential message stays until the next keypress, so it cannot vanish unread.
+    /// Setup messages ("don't match") still clear on their own.
+    private func showError(message: String, lockedUntil: Date? = nil) {
+        let id = feedback.reject(message, lockedUntil: lockedUntil)
+        if let lockedUntil {
+            clearFeedback(id, after: lockedUntil.timeIntervalSinceNow)
+        } else if isSettingPasscode {
+            clearFeedback(id, after: 3)
+        }
+    }
+
+    private func showLockout(until lockedUntil: Date) {
+        let id = feedback.showLockout(until: lockedUntil)
+        clearFeedback(id, after: lockedUntil.timeIntervalSinceNow)
+    }
+
+    private func clearFeedback(_ id: UUID, after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay)) {
+            feedback.clear(ifStill: id)
+            if !feedback.isLocked { isPasscodeFocused = true }
         }
     }
 

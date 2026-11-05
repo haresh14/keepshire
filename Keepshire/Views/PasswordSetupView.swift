@@ -28,8 +28,7 @@ struct PasswordSetupView: View {
     
     @State private var password: String = ""
     @State private var confirmPassword: String = ""
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
+    @State private var feedback = CredentialFeedbackState()
     @State private var showPassword: Bool = false
     @State private var showConfirmPassword: Bool = false
     @FocusState private var isPasswordFocused: Bool
@@ -105,8 +104,11 @@ struct PasswordSetupView: View {
     
     private var passwordInputSection: some View {
         VStack(spacing: 20) {
-            passwordField
-            confirmPasswordField
+            Group {
+                passwordField
+                confirmPasswordField
+            }
+            .shake(feedback.shakes)
             passwordStrengthIndicator
             errorView
             setPasswordButton
@@ -189,14 +191,8 @@ struct PasswordSetupView: View {
         }
     }
     
-    @ViewBuilder
     private var errorView: some View {
-        if showError {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .transition(.opacity)
-        }
+        CredentialFeedback(message: feedback.message)
     }
     
     private var setPasswordButton: some View {
@@ -278,11 +274,9 @@ struct PasswordSetupView: View {
     }
     
     private func showError(message: String) {
-        errorMessage = message
-        showError = true
-        
+        let id = feedback.reject(message)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            showError = false
+            feedback.clear(ifStill: id)
         }
     }
     

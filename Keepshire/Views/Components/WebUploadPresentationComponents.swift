@@ -159,7 +159,7 @@ struct WebExportUnlockSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var credential = ""
-    @State private var errorMessage: String?
+    @State private var feedback = CredentialFeedbackState()
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -188,16 +188,17 @@ struct WebExportUnlockSheet: View {
                     .onSubmit(verifyCredential)
                     .accessibilityIdentifier("webUpload.exportCredential")
                     .keepshireFieldStyle()
+                    .shake(feedback.shakes)
+                    .onChange(of: credential) { _, value in
+                        if !value.isEmpty && !feedback.isLocked { feedback.clear() }
+                    }
+                    .disabled(feedback.isLocked)
 
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
+                CredentialFeedback(message: feedback.message, lockedUntil: feedback.lockedUntil)
 
                 Button("Allow Downloads", action: verifyCredential)
                     .buttonStyle(KeepshirePrimaryButtonStyle())
-                    .disabled(credential.isEmpty)
+                    .disabled(credential.isEmpty || feedback.isLocked)
                 Spacer()
             }
             .padding(.horizontal, 24)
@@ -212,6 +213,10 @@ struct WebExportUnlockSheet: View {
                 }
             }
             .onAppear {
+                if let until = UnlockThrottle.shared.lockedUntil() {
+                    let id = feedback.showLockout(until: until)
+                    clearFeedback(id, after: until.timeIntervalSinceNow)
+                }
                 if BiometricAuthManager.shared.canUseBiometrics() {
                     authenticateWithBiometrics()
                 } else {
@@ -244,20 +249,32 @@ struct WebExportUnlockSheet: View {
 
     private func verifyCredential() {
         let throttle = UnlockThrottle.shared
-        if let remaining = throttle.remainingLockout() {
+        if let until = throttle.lockedUntil() {
             credential = ""
-            errorMessage = UnlockThrottle.message(for: remaining)
+            let id = feedback.showLockout(until: until)
+            clearFeedback(id, after: until.timeIntervalSinceNow)
             return
         }
         // Only the real credential opens the envelope, so the duress one can never open a download window.
         guard FileStorageManager.shared.verifyCredential(credential) else {
             credential = ""
-            errorMessage = throttle.recordFailure().map(UnlockThrottle.message(for:)) ?? "That passcode is not right."
+            let rejection = throttle.rejection(noun: "passcode or password")
+            let id = feedback.reject(rejection.message, lockedUntil: rejection.lockedUntil)
+            if let until = rejection.lockedUntil {
+                clearFeedback(id, after: until.timeIntervalSinceNow)
+            }
             return
         }
         throttle.recordSuccess()
         onUnlocked()
         dismiss()
+    }
+
+    private func clearFeedback(_ id: UUID, after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay)) {
+            feedback.clear(ifStill: id)
+            if !feedback.isLocked { isFocused = true }
+        }
     }
 }
 

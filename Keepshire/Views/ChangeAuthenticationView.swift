@@ -16,8 +16,7 @@ struct ChangeAuthenticationView: View {
     @State private var newAuthType: AuthenticationType = .passcode4
     @State private var showCurrentPassword: Bool = false
     @State private var isCurrentPasswordVerified: Bool = false
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
+    @State private var feedback = CredentialFeedbackState()
     @State private var navigationPath = NavigationPath()
     /// The stored credential the vault key is derived from; the typed text may differ in whitespace.
     @State private var verifiedOldPassword: String = ""
@@ -79,6 +78,13 @@ struct ChangeAuthenticationView: View {
         VStack(spacing: 20) {
             headerSection
             currentPasswordInput
+                .shake(feedback.shakes)
+                .onChange(of: currentPassword) { _, value in
+                    if !value.isEmpty && !feedback.isLocked { feedback.clear() }
+                }
+                .disabled(feedback.isLocked)
+                .opacity(feedback.isLocked ? 0.45 : 1)
+                .animation(.easeOut(duration: 0.2), value: feedback.isLocked)
             errorView
         }
     }
@@ -124,6 +130,9 @@ struct ChangeAuthenticationView: View {
         .onAppear {
             if !currentAuthType.isPasscode {
                 isCurrentPasswordFocused = true
+            }
+            if let until = UnlockThrottle.shared.lockedUntil() {
+                showLockout(until: until)
             }
         }
         .onChange(of: currentPassword) { _, newValue in
@@ -183,22 +192,16 @@ struct ChangeAuthenticationView: View {
         .buttonStyle(KeepshirePrimaryButtonStyle())
     }
     
-    @ViewBuilder
     private var errorView: some View {
-        if showError {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .transition(.opacity)
-        }
+        CredentialFeedback(message: feedback.message, lockedUntil: feedback.lockedUntil)
     }
     
     // MARK: - Actions
     
     private func verifyCurrentPassword() {
         let throttle = UnlockThrottle.shared
-        if let remaining = throttle.remainingLockout() {
-            showError(message: UnlockThrottle.message(for: remaining))
+        if let until = throttle.lockedUntil() {
+            showLockout(until: until)
             currentPassword = ""
             return
         }
@@ -214,12 +217,8 @@ struct ChangeAuthenticationView: View {
             return
         }
 
-        let type = currentAuthType.isPasscode ? "passcode" : "password"
-        if let wait = throttle.recordFailure() {
-            showError(message: UnlockThrottle.message(for: wait))
-        } else {
-            showError(message: "Incorrect \(type)")
-        }
+        let rejection = throttle.rejection(noun: currentAuthType.isPasscode ? "passcode" : "password")
+        showError(message: rejection.message, lockedUntil: rejection.lockedUntil)
         currentPassword = ""
     }
     
@@ -228,12 +227,22 @@ struct ChangeAuthenticationView: View {
         navigationPath.append(newAuthType)
     }
     
-    private func showError(message: String) {
-        errorMessage = message
-        showError = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            showError = false
+    /// Stays until the next keypress, or until a lockout ends, so it cannot vanish unread.
+    private func showError(message: String, lockedUntil: Date? = nil) {
+        let id = feedback.reject(message, lockedUntil: lockedUntil)
+        if let lockedUntil {
+            clearFeedback(id, after: lockedUntil.timeIntervalSinceNow)
+        }
+    }
+
+    private func showLockout(until lockedUntil: Date) {
+        let id = feedback.showLockout(until: lockedUntil)
+        clearFeedback(id, after: lockedUntil.timeIntervalSinceNow)
+    }
+
+    private func clearFeedback(_ id: UUID, after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay)) {
+            feedback.clear(ifStill: id)
         }
     }
     

@@ -25,8 +25,8 @@ final class UnlockThrottle {
     /// Free tries first, then waits that grow like the iPhone's own lock screen.
     static func lockout(afterFailures failures: Int) -> TimeInterval {
         switch failures {
-        case ..<5: return 0
-        case 5: return 30
+        case ..<freeAttempts: return 0
+        case freeAttempts: return 30
         case 6: return 60
         case 7: return 5 * 60
         case 8: return 15 * 60
@@ -55,14 +55,32 @@ final class UnlockThrottle {
         persist(State())
     }
 
-    static func message(for remaining: TimeInterval) -> String {
-        let minutes = Int((remaining / 60).rounded(.up))
-        if remaining < 60 {
-            let seconds = Int(remaining.rounded(.up))
-            return "Too many attempts. Try again in \(seconds) second\(seconds == 1 ? "" : "s")."
-        }
-        return "Too many attempts. Try again in \(minutes) minute\(minutes == 1 ? "" : "s")."
+    /// When the current lockout ends, or nil when an attempt is allowed now.
+    func lockedUntil(now: Date = Date()) -> Date? {
+        guard let lockedUntil = state.lockedUntil, lockedUntil > now else { return nil }
+        return lockedUntil
     }
+
+    /// Records a wrong credential and says what to show: a short message, or the lockout it caused.
+    func rejection(noun: String, now: Date = Date()) -> (message: String, lockedUntil: Date?) {
+        if let wait = recordFailure(now: now) {
+            return ("Incorrect \(noun).", now.addingTimeInterval(wait))
+        }
+        let left = Self.freeAttempts - state.failures
+        guard left <= 2 else { return ("Incorrect \(noun). Try again.", nil) }
+        return ("Incorrect \(noun). \(left) more \(left == 1 ? "try" : "tries") before a short wait.", nil)
+    }
+
+    /// "Too many attempts. Try again in 0:28" — a clock under an hour, so the countdown reads naturally.
+    static func lockoutMessage(remaining: TimeInterval) -> String {
+        let total = max(1, Int(remaining.rounded(.up)))
+        let clock = total >= 3600
+            ? "\(total / 3600):" + String(format: "%02d:%02d", (total % 3600) / 60, total % 60)
+            : "\(total / 60):" + String(format: "%02d", total % 60)
+        return "Too many attempts. Try again in \(clock)."
+    }
+
+    private static let freeAttempts = 5
 
     private var state: State {
         guard let data = load(), let state = try? JSONDecoder().decode(State.self, from: data) else {

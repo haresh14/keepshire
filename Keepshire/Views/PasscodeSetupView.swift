@@ -31,8 +31,7 @@ struct PasscodeSetupView: View {
     
     @State private var passcode: String = ""
     @State private var confirmPasscode: String = ""
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
+    @State private var feedback = CredentialFeedbackState()
     @State private var isConfirming: Bool = false
     @Environment(\.dismiss) private var dismiss
     
@@ -72,7 +71,7 @@ struct PasscodeSetupView: View {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             isConfirming = false
                             confirmPasscode = ""
-                            showError = false
+                            feedback.clear()
                         }
                     }) {
                         HStack(spacing: 4) {
@@ -124,11 +123,14 @@ struct PasscodeSetupView: View {
     
     private var passcodeInputSection: some View {
         VStack(spacing: 20) {
-            if isConfirming {
-                OTPStylePasscodeView(digitCount: digitCount, passcode: $confirmPasscode)
-            } else {
-                OTPStylePasscodeView(digitCount: digitCount, passcode: $passcode)
+            Group {
+                if isConfirming {
+                    OTPStylePasscodeView(digitCount: digitCount, passcode: $confirmPasscode)
+                } else {
+                    OTPStylePasscodeView(digitCount: digitCount, passcode: $passcode)
+                }
             }
+            .shake(feedback.shakes)
             
             errorView
         }
@@ -152,14 +154,8 @@ struct PasscodeSetupView: View {
         }
     }
     
-    @ViewBuilder
     private var errorView: some View {
-        if showError {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .transition(.opacity)
-        }
+        CredentialFeedback(message: feedback.message)
     }
     
     // MARK: - Actions
@@ -215,11 +211,9 @@ struct PasscodeSetupView: View {
     }
     
     private func showError(message: String) {
-        errorMessage = message
-        showError = true
-        
+        let id = feedback.reject(message)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            showError = false
+            feedback.clear(ifStill: id)
         }
     }
 }
