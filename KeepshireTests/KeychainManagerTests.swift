@@ -59,6 +59,26 @@ struct KeychainManagerTests {
         try manager.deletePassword()
     }
 
+    @Test func testAuthTypeIsRepairedWhenItCannotEnterTheStoredCredential() async throws {
+        let defaults = UserDefaults(suiteName: "auth-type-\(UUID().uuidString)")!
+        let manager = KeychainManager(service: "auth-type-\(UUID().uuidString)", defaults: defaults)
+        defer { try? manager.deletePassword() }
+
+        // A crash after the Keychain write but before the type reached disk.
+        try manager.savePassword("135790")
+        manager.setAuthenticationType(.passcode4)
+        #expect(manager.getAuthenticationType() == .passcode6)
+
+        try manager.savePassword("Secret123")
+        manager.setAuthenticationType(.passcode6)
+        #expect(manager.getAuthenticationType() == .password)
+
+        // A password type can enter any credential, so a digit-only password keeps its type.
+        try manager.savePassword("123456")
+        manager.setAuthenticationType(.password)
+        #expect(manager.getAuthenticationType() == .password)
+    }
+
     @Test func testKeyDerivationRecordStorage() async throws {
         let testKeychain = TestKeychain()
         let manager = testKeychain.manager

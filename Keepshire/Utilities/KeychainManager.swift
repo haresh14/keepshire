@@ -39,6 +39,16 @@ enum AuthenticationType: String, CaseIterable {
         case .password: return nil
         }
     }
+
+    /// Whether this type's input UI can type `credential`. A password field accepts anything.
+    func canEnter(_ credential: String) -> Bool {
+        guard let digitCount else { return true }
+        return credential.count == digitCount && credential.allSatisfy(\.isNumber)
+    }
+
+    static func inferred(from credential: String) -> AuthenticationType {
+        [.passcode4, .passcode6].first { $0.canEnter(credential) } ?? .password
+    }
 }
 
 class KeychainManager: KeychainManaging {
@@ -222,12 +232,20 @@ class KeychainManager: KeychainManaging {
         defaults.set(type.rawValue, forKey: authTypeKey)
     }
     
+    /// The type is kept in UserDefaults and the credential in the Keychain, so a crash between the
+    /// two writes can leave a keypad that cannot enter the stored credential. Whenever they disagree,
+    /// the credential wins and the type is repaired, so the lock screen can always accept it.
     func getAuthenticationType() -> AuthenticationType {
-        guard let rawValue = defaults.string(forKey: authTypeKey),
-              let type = AuthenticationType(rawValue: rawValue) else {
-            return .passcode4 // Default to 4-digit passcode
+        let stored = defaults.string(forKey: authTypeKey).flatMap(AuthenticationType.init(rawValue:))
+        guard let password = try? getPassword() else {
+            return stored ?? .passcode4 // Default to 4-digit passcode
         }
-        return type
+        if let stored, stored.canEnter(password) {
+            return stored
+        }
+        let repaired = AuthenticationType.inferred(from: password)
+        setAuthenticationType(repaired)
+        return repaired
     }
     
     func isAuthenticationTypeSet() -> Bool {

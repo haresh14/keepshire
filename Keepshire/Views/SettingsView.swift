@@ -46,6 +46,8 @@ struct SettingsView: View {
     @State private var lockTimeout = KeychainManager.shared.getLockTimeout()
     @State private var showBiometricAlert = false
     @State private var showChangeAuthSheet = false
+    /// Held in state because the stored value lives in UserDefaults, which SwiftUI does not observe.
+    @State private var currentAuthType = KeychainManager.shared.getAuthenticationType()
     @State private var showFakePasswordSheet = false
     @State private var showFakePasswordAlert = false
     @State private var fakePasswordAlertMessage = ""
@@ -63,9 +65,6 @@ struct SettingsView: View {
     @StateObject private var loginStateManager = LoginStateManager.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    private var currentAuthType: AuthenticationType {
-        KeychainManager.shared.getAuthenticationType()
-    }
 
     var body: some View {
         settingsLayout
@@ -342,6 +341,7 @@ struct SettingsView: View {
 
     private func authenticationChanged() {
         showChangeAuthSheet = false
+        currentAuthType = KeychainManager.shared.getAuthenticationType()
         guard KeychainManager.shared.isFakePasswordSet() else { return }
         do {
             try KeychainManager.shared.deleteFakePassword()
