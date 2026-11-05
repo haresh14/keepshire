@@ -139,9 +139,6 @@
     "Allow Downloads" : {
 
     },
-    "Allow downloads for 10 minutes" : {
-
-    },
     "Allow Downloads for 10 Minutes" : {
 
     },
@@ -209,9 +206,6 @@
 
     },
     "Complete App Reset" : {
-
-    },
-    "Confirm it's you before the browser can pull files out of the vault." : {
 
     },
     "Confirm Passcode" : {
@@ -346,9 +340,6 @@
     "Files" : {
 
     },
-    "Files of this type will appear here when you add them to your vault" : {
-
-    },
     "Folder" : {
 
     },
@@ -425,22 +416,6 @@
 
     },
     "Name" : {
-
-    },
-    "No %@" : {
-
-    },
-    "No %@ match '%@'" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "No %1$@ match '%2$@'"
-          }
-        }
-      }
-    },
-    "No Results" : {
 
     },
     "Not favorited" : {
