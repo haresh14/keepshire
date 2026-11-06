@@ -1,28 +1,27 @@
 1. SCREEN RECORDING
-Attached: recorded on a physical iPhone running the latest iOS. It starts at app launch and shows unlocking, importing photos and files, viewing, folders, categories, Web Upload, settings (including the passcode setup screens under Change Authentication), and auto-lock. Screen Recording Protection, on by default, covers the app with black while the screen is recorded; it was turned off in Settings → Advanced Security for this video. Keepshire has no account registration, login, account deletion, user-generated content shared between users, or paid content, so none of those flows exist.
+Attached: recorded on a physical iPhone running the latest iOS. It starts at app launch and shows unlocking, importing photos and files, viewing, folders, categories, Web Upload, settings (including passcode setup under Change Authentication), and auto-lock. Screen Recording Protection (on by default) blacks out the app while recording, so it was turned off in Settings → Advanced Security for this video. There is no account, login, account deletion, content shared between users, or paid content, so those flows do not exist.
 
 2. PURPOSE AND AUDIENCE
 Keepshire is a private, encrypted vault for photos, videos, audio, and documents that people want to keep off their camera roll: ID scans, receipts, medical paperwork, personal photos. It is for adults who share or hand over their phone and want some files behind a separate passcode. Everything stays on the device: no account, no cloud, no analytics. Files are encrypted with AES-GCM under a random vault key that only the user's passcode, Face ID, or optional recovery key can unlock.
 
 3. HOW TO REVIEW (no login or demo account needed)
 - First launch: choose "6-digit passcode" (any code, entered twice). Face ID is optional. You are then offered a recovery key; "Not Now" skips it.
-- The empty vault shows "Add Files" / "Add Photos". Later, use the "…" button at the top right → Add Files. Pick photos from the system photo picker (no photo-library permission is requested) or any file from the Files app. Any photo on the review device works; no sample files are required.
-- Tap an item to open it: pinch to zoom, double-tap, swipe between photos. Videos play inline; PDFs and documents open in the viewer.
+- Add files with the empty vault's "Add Files" button, or later with "…" (top right) → Add Files. Pick photos from the system photo picker (no photo-library permission is requested) or any file from the Files app. Any photo works; no sample files are needed.
+- Tap an item to open it: pinch to zoom, double-tap, swipe between photos. Videos play inline; PDFs and documents open too.
 - Folder tab: create folders and move files. Category tab: browse by type. Gallery: all photos and videos.
-- Share sheet: in Photos or Files, share an item to "Keepshire"; it is imported the next time the vault is unlocked.
+- Share sheet: in Photos or Files, share an item to "Keepshire"; it is imported at the next unlock.
 - Settings: auto-lock timing, Face ID, change passcode, recovery key, a decoy passcode that opens an empty vault, screenshot blanking, shake/flip to lock, and Trash.
-- Web Upload (optional): tap Start Server, open the shown https:// address in a browser on another device on the same Wi-Fi, accept the browser's certificate warning (the certificate is generated on the phone), and enter the 6-digit pairing code. Local Network permission is requested only then. Downloads also require Face ID or the vault passcode.
-- Recovery key (optional): Settings → Recovery Key shows a 24-character key once and asks for its last 4 characters. On the lock screen, "Forgot passcode?" then accepts the key and lets you set a new passcode.
-- If you forget the review passcode and set no recovery key, delete and reinstall the app to start a new, empty vault.
+- Web Upload (optional): tap Start Server, open the shown https:// address from a browser on the same Wi-Fi, accept the browser's certificate warning (the certificate is made on the phone), and enter the 6-digit pairing code. Local Network permission is requested only then. Downloads also require Face ID or the vault passcode.
+- Recovery key (optional): Settings → Recovery Key shows a 24-character key once; confirm its last 4 characters. "Forgot passcode?" on the lock screen then accepts it and sets a new passcode. Without a key, a forgotten passcode means reinstalling for a new, empty vault.
 
 4. EXTERNAL SERVICES
-None. Keepshire uses no third-party SDKs, analytics, advertising, authentication, payment, AI, or cloud services and makes no network requests to any server. It uses only Apple frameworks (SwiftUI, CryptoKit, CommonCrypto, Security, Network, PhotosUI, AVKit, PDFKit, QuickLook, LocalAuthentication). The optional Web Upload server runs on the phone itself and is reachable only on the local Wi-Fi. The privacy policy and support pages are static web pages.
+None. Keepshire uses no third-party SDKs, analytics, advertising, authentication, payment, AI, or cloud services and makes no network requests to any server. It uses only Apple frameworks (including CryptoKit, CommonCrypto, Security, Network, PhotosUI, LocalAuthentication). The optional Web Upload server runs on the phone itself and is reachable only on the local Wi-Fi. The privacy and support pages are static.
 
 5. REGIONAL DIFFERENCES
-None. The app works the same in every region; the interface is English.
+None. The app is the same in every region; the interface is English.
 
 6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
-Not applicable. Keepshire is not in a regulated industry and contains no third-party content. It only stores files the user adds.
+Not applicable: no regulated industry and no third-party content. It only stores the user's own files.
 
 ENCRYPTION DETAILS
-Files and metadata are encrypted on device with AES-GCM (CryptoKit) under a random 256-bit vault key. The Keychain stores that key only wrapped: with AES-GCM under a PBKDF2-HMAC-SHA256 (CommonCrypto) key from the passcode or the optional recovery key, and as a Secure Enclave–protected copy for Face ID. The passcode itself is never stored; Keychain items are ThisDeviceOnly; vault files are excluded from backup. Web Upload uses HTTPS (Network framework) with a new self-signed certificate per session. Screenshot blanking uses a standard secure text field layer and does not block the screenshot itself.
+Files and metadata are encrypted on device with AES-GCM (CryptoKit) under a random 256-bit vault key. The Keychain stores that key only wrapped: with AES-GCM under a PBKDF2-HMAC-SHA256 (CommonCrypto) key from the passcode or the optional recovery key, and as a Secure Enclave–protected copy for Face ID. The passcode itself is never stored; Keychain items are ThisDeviceOnly; vault files are excluded from backup. Web Upload uses HTTPS (Network framework) with a new self-signed certificate per session. Screenshot blanking uses a standard secure text field layer; it does not block screenshots.
